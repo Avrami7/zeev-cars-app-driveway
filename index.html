@@ -824,7 +824,7 @@ function renderVehicleTable(sel, list, editable){
   var table = $(sel);
   table.innerHTML = head + "<tbody>" + body + "</tbody>";
   if (editable){
-    $all(sel+" .v-edit").forEach(function(i){ i.addEventListener("input", function(){ handleVehicleEdit(i); }); i.addEventListener("change", function(){ handleVehicleEdit(i); }); });
+    $all(sel+" .v-edit").forEach(function(i){ i.addEventListener("input", function(){ handleVehicleEditLight(i); }); i.addEventListener("change", function(){ handleVehicleEditCommit(i); }); });
   }
   $all(sel+" [data-del-vehicle]").forEach(function(btn){
     btn.addEventListener("click", function(){
@@ -834,7 +834,7 @@ function renderVehicleTable(sel, list, editable){
     });
   });
 }
-function handleVehicleEdit(input){
+function handleVehicleEditLight(input){
   var v = null;
   for (var i=0;i<state.vehicles.length;i++) if (state.vehicles[i].id===input.dataset.id){ v=state.vehicles[i]; break; }
   if (!v) return;
@@ -842,6 +842,9 @@ function handleVehicleEdit(input){
   if (field === "montantHT") val = parseFloat(val) || 0;
   v[field] = val;
   markDirty();
+}
+function handleVehicleEditCommit(input){
+  handleVehicleEditLight(input);
   var p = partnerById(state.activeTab);
   if (p) renderVehicleTable("#table-partner-"+p.id, vehiclesForPartner(p.id), true);
   renderNavTabs();
