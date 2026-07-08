@@ -270,6 +270,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
       <button id="print-btn" class="tb-btn">Imprimer</button>
       <button id="collab-btn" class="tb-btn hidden">Collaborateurs</button>
       <button id="export-csv-btn" class="tb-btn hidden">Export CSV</button>
+      <button id="import-csv-btn" class="tb-btn hidden">Importer CSV</button>
+      <input type="file" id="import-csv-file" accept=".csv" class="hidden">
       <div class="tb-sep"></div>
       <button id="logout-btn" class="tb-btn danger">Déconnexion</button>
     </div>
@@ -432,6 +434,99 @@ async function apiExportCsv(){
 }
 
 /* =====================================================================
+   IMPORT CSV — colonnes alignees sur l'export (/api/export), pour un
+   aller-retour fiable Export -> modification dans Excel -> Import.
+   Colonnes reconnues (position, pas obligatoirement toutes presentes) :
+   id;N°;Société de leasing;Client;Conducteur;Modèle;Immat.;VIN;
+   N° contrat/commande;Statut véhicule (source);Concession;SIREN;SIRET;
+   Adresse fournisseur;Statut livraison;Date livraison prévue;
+   Date livraison effective;Montant HT;% Commission;Commission HT;
+   Statut facturation;N° facture;Date facture;Statut paiement;
+   Éligibilité facturation;Pénalité...;Remarques
+   ===================================================================== */
+function parseCsvLine(line){
+  var out = [], cur = "", inQuotes = false;
+  for (var i = 0; i < line.length; i++){
+    var c = line[i];
+    if (inQuotes){
+      if (c === '"'){
+        if (line[i+1] === '"'){ cur += '"'; i++; } else { inQuotes = false; }
+      } else cur += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ";"){ out.push(cur); cur = ""; }
+      else cur += c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+function parseNum(s){
+  if (s == null || s === "") return null;
+  var n = parseFloat(String(s).replace(/\s/g,"").replace(",", "."));
+  return isNaN(n) ? null : n;
+}
+
+function importCsvFile(file){
+  var reader = new FileReader();
+  reader.onload = function(){
+    var text = String(reader.result).replace(/^\uFEFF/, "");
+    var lines = text.split(/\r?\n/).filter(function(l){ return l.trim().length; });
+    if (lines.length < 2){ toast("Fichier CSV vide ou invalide.", "err"); return; }
+
+    var cols = ["id","num","societeLeasing","client","conducteur","modele","immatriculation","vin",
+      "numeroContrat","statutVehiculeSource","concession","siren","siret","adresseFournisseur",
+      "statutLivraison","dateLivraisonPrevue","dateLivraisonEffective","montantHT","pctCommission",
+      "commissionHT","statutFacturation","numeroFacture","dateFacture","statutPaiement",
+      "eligibilite","penalite","remarques"];
+
+    var partnersByName = {};
+    state.partners.forEach(function(p){ partnersByName[p.distributeur.trim().toLowerCase()] = p; });
+
+    var added = 0, updated = 0, skipped = 0;
+    for (var i = 1; i < lines.length; i++){
+      var fields = parseCsvLine(lines[i]);
+      if (fields.length < 10){ skipped++; continue; }
+      var row = {};
+      cols.forEach(function(name, idx){ row[name] = fields[idx] != null ? fields[idx].trim() : ""; });
+
+      var partner = partnersByName[row.concession.toLowerCase()];
+      if (!partner){ skipped++; continue; }
+
+      var existing = row.id ? state.vehicles.find(function(v){ return v.id === row.id; }) : null;
+      var target = existing || { id: uid("v") };
+
+      target.partnerId = partner.id;
+      target.societeLeasing = row.societeLeasing;
+      target.client = row.client;
+      target.conducteur = row.conducteur;
+      target.modele = row.modele;
+      target.immatriculation = row.immatriculation.toUpperCase();
+      target.vin = row.vin.toUpperCase();
+      target.numeroContrat = row.numeroContrat;
+      target.statutVehiculeSource = row.statutVehiculeSource;
+      target.statutLivraison = ["COMMANDE","LIVRE","NON_LIVRE"].indexOf(row.statutLivraison) !== -1 ? row.statutLivraison : (existing ? existing.statutLivraison : "COMMANDE");
+      target.dateLivraisonPrevue = row.dateLivraisonPrevue;
+      target.dateLivraisonEffective = row.dateLivraisonEffective;
+      target.montantHT = parseNum(row.montantHT);
+      target.statutFacturation = ["NON_FACTURE","FACTURE"].indexOf(row.statutFacturation) !== -1 ? row.statutFacturation : (existing ? existing.statutFacturation : "NON_FACTURE");
+      target.numeroFacture = row.numeroFacture;
+      target.dateFacture = row.dateFacture;
+      target.statutPaiement = ["A_VERIFIER","IMPAYE","PAYE"].indexOf(row.statutPaiement) !== -1 ? row.statutPaiement : (existing ? existing.statutPaiement : "A_VERIFIER");
+      target.remarques = row.remarques;
+
+      if (existing) updated++;
+      else { state.vehicles.push(target); added++; }
+    }
+
+    if (added || updated) markDirty();
+    toast(added + " ajouté(s), " + updated + " mis à jour" + (skipped ? ", " + skipped + " ligne(s) ignorée(s) (concession introuvable)" : "") + ". Pensez à « Enregistrer sur GitHub ».", (added||updated) ? "ok" : "err");
+    renderAll();
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+/* =====================================================================
    LOGIN — OAuth GitHub (Authorization Code flow)
    ===================================================================== */
 const OAUTH_STATE_KEY = "zcd_oauth_state";
@@ -539,6 +634,7 @@ function applyScopeVisibility(){
   var full = state.scope === "FULL";
   $("#collab-btn").classList.toggle("hidden", !(state.user && state.user.isOwner));
   $("#export-csv-btn").classList.toggle("hidden", !full);
+  $("#import-csv-btn").classList.toggle("hidden", !full);
 }
 
 /* =====================================================================
@@ -1086,6 +1182,8 @@ document.getElementById("save-btn").addEventListener("click", saveAll);
 document.getElementById("print-btn").addEventListener("click", function(){ window.print(); });
 document.getElementById("collab-btn").addEventListener("click", openCollabModal);
 document.getElementById("export-csv-btn").addEventListener("click", function(){ apiExportCsv().catch(function(e){ toast(e.message, "err"); }); });
+document.getElementById("import-csv-btn").addEventListener("click", function(){ document.getElementById("import-csv-file").click(); });
+document.getElementById("import-csv-file").addEventListener("change", function(e){ if (e.target.files[0]) importCsvFile(e.target.files[0]); e.target.value = ""; });
 document.getElementById("vehicle-submit-btn").addEventListener("click", submitVehicle);
 document.getElementById("invoice-select-all").addEventListener("click", function(){ $all("#invoice-vehicle-table .inv-chk").forEach(function(c){ c.checked=true; }); updateInvoiceTotal(); });
 document.getElementById("invoice-print-btn").addEventListener("click", printInvoice);
