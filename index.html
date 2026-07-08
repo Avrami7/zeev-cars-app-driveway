@@ -331,8 +331,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
         </select>
       </div>
       <div class="form-grid">
-        <div class="form-row"><label for="v-date-prevue">Date livraison prévue</label><input type="date" id="v-date-prevue"></div>
-        <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="date" id="v-date-effective"></div>
+        <div class="form-row"><label for="v-date-prevue">Date livraison prévue</label><input type="text" id="v-date-prevue" placeholder="AAAA-MM-JJ"></div>
+        <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="text" id="v-date-effective" placeholder="AAAA-MM-JJ"></div>
       </div>
       <div class="form-row"><label for="v-statut-source">Statut véhicule (source)</label><input type="text" id="v-statut-source" placeholder="ex : Vehicle On Order, Préparation - Résa..."></div>
       <div class="form-row"><label for="v-remarques">Remarques</label><textarea id="v-remarques"></textarea></div>
@@ -349,9 +349,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
       <div class="modal-note">Sélectionnez les véhicules livrés à regrouper sur une seule facture. Document de travail destiné à votre outil de facturation — pas une facture légale émise automatiquement.</div>
       <div class="form-grid">
         <div class="form-row"><label for="inv-number">N° de facture</label><input type="text" id="inv-number"></div>
-        <div class="form-row"><label for="inv-date">Date d'émission</label><input type="date" id="inv-date"></div>
+        <div class="form-row"><label for="inv-date">Date d'émission</label><input type="text" id="inv-date" placeholder="AAAA-MM-JJ"></div>
       </div>
-      <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="date" id="inv-due"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
+      <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="text" id="inv-due" placeholder="AAAA-MM-JJ"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
       <div class="table-wrap"><table class="data-table" id="invoice-vehicle-table"></table></div>
       <div class="invoice-total-bar"><span>Total sélectionné : <strong id="invoice-total">0,00 €</strong></span><button class="btn small" id="invoice-select-all">Tout sélectionner</button></div>
     </div>
@@ -798,8 +798,8 @@ function renderVehicleTable(sel, list, editable){
           '<td><select data-id="'+v.id+'" data-field="statutLivraison" class="v-edit">' +
             Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'"'+(v.statutLivraison===k?" selected":"")+'>'+STATUT_LABELS[k]+'</option>'; }).join("") +
           '</select></td>' +
-          '<td><input type="date" data-id="'+v.id+'" data-field="dateLivraisonPrevue" value="'+(v.dateLivraisonPrevue||"")+'" class="v-edit"></td>' +
-          '<td><input type="date" data-id="'+v.id+'" data-field="dateLivraisonEffective" value="'+(v.dateLivraisonEffective||"")+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonPrevue" value="'+(v.dateLivraisonPrevue||"")+'" placeholder="AAAA-MM-JJ" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonEffective" value="'+(v.dateLivraisonEffective||"")+'" placeholder="AAAA-MM-JJ" class="v-edit"></td>' +
           (full ? '<td class="num"><input type="number" step="0.01" min="0" data-id="'+v.id+'" data-field="montantHT" value="'+(v.montantHT!=null?v.montantHT:"")+'" class="v-edit" style="text-align:right"></td>' +
                   '<td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
                   '<td><select data-id="'+v.id+'" data-field="statutPaiement" class="v-edit">' +
