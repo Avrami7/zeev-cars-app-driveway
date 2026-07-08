@@ -755,7 +755,7 @@ function eligibiliteFacturation(v){
 function renderVehicleTable(sel, list, editable){
   var full = state.scope === "FULL";
   var head = "<thead><tr><th>Client</th><th>Conducteur</th><th>Société leasing</th><th>Modèle / Version</th><th>Immatriculation</th><th>VIN</th><th>N° contrat</th><th>Statut véhicule (source)</th><th>Statut livraison</th><th>Date prévue</th><th>Date effective</th>" +
-    (full ? "<th>Montant HT</th><th>Commission</th><th>Statut paiement</th><th>Éligibilité facturation</th>" : "") + (editable ? "<th></th>" : "") + "</tr></thead>";
+    (full ? "<th>Montant HT</th><th>Commission</th><th>Statut paiement</th><th>Éligibilité facturation</th>" : "") + "<th></th></tr></thead>";
   var body = "";
   if (!list.length){
     body = '<tr class="empty-row"><td colspan="16">Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».</td></tr>';
@@ -793,7 +793,8 @@ function renderVehicleTable(sel, list, editable){
           '<td>'+escapeHtml(v.statutVehiculeSource)+'</td><td>'+statutPill(v.statutLivraison)+'</td>' +
           '<td>'+(v.dateLivraisonPrevue||"—")+'</td><td>'+(v.dateLivraisonEffective||"—")+'</td>' +
           (full ? '<td class="num">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td><td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
-                  '<td>'+(STATUT_PAIEMENT_LABELS[v.statutPaiement]||"—")+'</td><td><span class="pill '+elig.cls+'">'+elig.label+'</span></td>' : '') + '</tr>';
+                  '<td>'+(STATUT_PAIEMENT_LABELS[v.statutPaiement]||"—")+'</td><td><span class="pill '+elig.cls+'">'+elig.label+'</span></td>' : '') +
+          '<td class="actions"><button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td></tr>';
       }
     });
   }
@@ -801,14 +802,14 @@ function renderVehicleTable(sel, list, editable){
   table.innerHTML = head + "<tbody>" + body + "</tbody>";
   if (editable){
     $all(sel+" .v-edit").forEach(function(i){ i.addEventListener("input", function(){ handleVehicleEdit(i); }); i.addEventListener("change", function(){ handleVehicleEdit(i); }); });
-    $all(sel+" [data-del-vehicle]").forEach(function(btn){
-      btn.addEventListener("click", function(){
-        if (!confirm("Supprimer ce véhicule ?")) return;
-        state.vehicles = state.vehicles.filter(function(v){ return v.id !== btn.dataset.delVehicle; });
-        markDirty(); renderAll();
-      });
-    });
   }
+  $all(sel+" [data-del-vehicle]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      if (!confirm("Supprimer ce véhicule ?")) return;
+      state.vehicles = state.vehicles.filter(function(v){ return v.id !== btn.dataset.delVehicle; });
+      markDirty(); renderAll();
+    });
+  });
 }
 function handleVehicleEdit(input){
   var v = null;
