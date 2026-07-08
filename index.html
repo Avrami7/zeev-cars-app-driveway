@@ -199,12 +199,35 @@ main{padding:22px}
 .toast.ok{border-color:var(--ok);color:var(--ok)}
 
 #print-invoice-area{display:none}
+
+/* ---------- IMPRESSION : deux modes distincts ----------
+   1) Mode general (bouton "Imprimer" de la topbar) : imprime le contenu de
+      l'onglet actif (#main-content), masque tout le reste de l'interface.
+   2) Mode facture (bouton "Generer et imprimer la facture") : n'imprime QUE
+      la facture generee, meme si un onglet est ouvert derriere. Active via
+      la classe .print-invoice-mode sur <body>, posee juste avant window.print(). */
 @media print{
-  body *{visibility:hidden}
-  #print-invoice-area, #print-invoice-area *{visibility:visible}
-  #print-invoice-area{display:block;position:absolute;top:0;left:0;width:100%;padding:20px;color:#000;background:#fff}
+  body.print-invoice-mode *{visibility:hidden}
+  body.print-invoice-mode #print-invoice-area,
+  body.print-invoice-mode #print-invoice-area *{visibility:visible}
+  body.print-invoice-mode #print-invoice-area{display:block;position:absolute;top:0;left:0;width:100%;padding:20px;color:#000;background:#fff}
   #print-invoice-area table{width:100%;border-collapse:collapse}
   #print-invoice-area th,#print-invoice-area td{border:1px solid #999;padding:6px 8px;font-size:12px}
+
+  /* Mode general : masquer l'habillage de l'appli, ne garder que le contenu de l'onglet actif */
+  body:not(.print-invoice-mode) #auth-overlay,
+  body:not(.print-invoice-mode) .topbar,
+  body:not(.print-invoice-mode) .nav,
+  body:not(.print-invoice-mode) .appfooter,
+  body:not(.print-invoice-mode) .toast,
+  body:not(.print-invoice-mode) .modal-overlay,
+  body:not(.print-invoice-mode) .actions-row,
+  body:not(.print-invoice-mode) #print-invoice-area{ display:none !important; }
+  body:not(.print-invoice-mode) main{ padding:0; }
+  body:not(.print-invoice-mode) .table-wrap{ overflow:visible; border:none; }
+  body:not(.print-invoice-mode) .data-table{ min-width:0; }
+  body:not(.print-invoice-mode) .btn,
+  body:not(.print-invoice-mode) .tb-btn{ display:none !important; }
 }
 @media (max-width:760px){
   main{padding:14px} .data-table{min-width:640px} .form-grid{grid-template-columns:1fr}
@@ -1076,7 +1099,9 @@ function printInvoice(){
     "<table><thead><tr><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead><tbody>"+lines+"</tbody></table>" +
     "<p style='text-align:right;margin-top:14px'><strong>Total HT sélectionné : "+fmtMoney(total)+"</strong>" +
     (commission!=null ? "<br>Commission ("+fmtPct(p.commissionPct)+") : "+fmtMoney(commission) : "") + "</p>";
+  document.body.classList.add("print-invoice-mode");
   window.print();
+  setTimeout(function(){ document.body.classList.remove("print-invoice-mode"); }, 500);
 }
 
 /* =====================================================================
@@ -1173,6 +1198,7 @@ document.getElementById("theme-btn").addEventListener("click", toggleTheme);
 document.getElementById("reload-btn").addEventListener("click", reloadAll);
 document.getElementById("save-btn").addEventListener("click", saveAll);
 document.getElementById("print-btn").addEventListener("click", function(){ window.print(); });
+window.addEventListener("afterprint", function(){ document.body.classList.remove("print-invoice-mode"); });
 document.getElementById("collab-btn").addEventListener("click", openCollabModal);
 document.getElementById("export-csv-btn").addEventListener("click", function(){ apiExportCsv().catch(function(e){ toast(e.message, "err"); }); });
 document.getElementById("import-csv-btn").addEventListener("click", function(){ document.getElementById("import-csv-file").click(); });
