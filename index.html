@@ -860,9 +860,7 @@ function handleVehicleEditLight(input){
 }
 function handleVehicleEditCommit(input){
   handleVehicleEditLight(input);
-  var p = partnerById(state.activeTab);
-  if (p) renderVehicleTable("#table-partner-"+p.id, vehiclesForPartner(p.id), true);
-  renderNavTabs();
+  renderAll();
 }
 function bindPanelActions(){
   $all("[data-open-vehicle]").forEach(function(b){ b.addEventListener("click", function(){ openVehicleModal(b.dataset.openVehicle); }); });
