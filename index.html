@@ -277,13 +277,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
     </div>
   </header>
 
-  <div class="fleet" id="fleet-bar">
-    <span class="fleet-label">SOURCES</span>
-    <span class="ft">ALPHABET</span><span class="ft">ATHLON</span>
-    <span style="color:var(--tx3)">·</span><span class="ft">SIEMENS ENERGY x DRIVEWAY</span>
-    <span style="color:var(--tx3)">·</span><span class="ft" id="fleet-count-badge">— concessions</span>
-  </div>
-
   <nav class="nav" id="nav-tabs"></nav>
   <main id="main-content"></main>
   <footer class="appfooter"><span id="footer-info">—</span></footer>
@@ -1159,7 +1152,6 @@ async function reloadAll(){
 
 function renderAll(){
   renderNavTabs();
-  $("#fleet-count-badge").textContent = state.partners.length + " concession" + (state.partners.length>1?"s":"");
   if (state.activeTab === "all") renderAllVehiclesPanel();
   else if (state.activeTab === "dashboard") renderDashboardPanel();
   else if (state.activeTab === "admin") renderAdminPanel();
@@ -1194,7 +1186,7 @@ window.addEventListener("beforeunload", function(e){ if (state.dirty){ e.prevent
 (async function init(){
   try { var t = localStorage.getItem("zcd_theme"); if (t){ state.theme=t; document.documentElement.setAttribute("data-theme", t); document.getElementById("theme-btn").textContent = t==="dark"?"Thème clair":"Thème sombre"; } } catch(e){}
   if (!isApiConfigured()){
-    document.getElementById("fleet-bar").insertAdjacentHTML("beforeend", '<span class="ft offline-badge" title="CONFIG.apiBase n\'est pas encore renseigné — voir DEPLOIEMENT.md.">⚠ WORKER NON CONFIGURÉ</span>');
+    toast("⚠ CONFIG.apiBase n'est pas encore renseigné — voir DEPLOIEMENT.md.", "err");
   }
   var handled = await handleGithubCallback();
   if (!handled){
