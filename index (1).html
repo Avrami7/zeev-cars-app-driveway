@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<title>ZEEV CARS x DRIVEWAY — Gestionnaire d'affaires</title>
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f6fa" media="(prefers-color-scheme: light)">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Poppins:ital,wght@0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fb; --bg2:#ffffff; --panel:#ffffff; --panel2:#f0f2f7; --line:#e5e7eb;
+  --tx1:#111827; --tx2:#6b7280; --tx3:#9ca3af;
+  --accent:#1d4ed8; --accent2:#2563eb; --ok:#16a34a; --warn:#c98a14; --err:#dc2626;
+  --radius:10px; --shadow:0 8px 28px rgba(17,24,39,.08);
+  --mono:'DM Mono',ui-monospace,Menlo,monospace; --disp:'Syne',ui-sans-serif,system-ui,sans-serif;
+}
+[data-theme="light"]{
+  --bg:#f4f6fb; --bg2:#ffffff; --panel:#ffffff; --panel2:#f0f2f7; --line:#e5e7eb;
+  --tx1:#111827; --tx2:#6b7280; --tx3:#9ca3af;
+  --accent:#1d4ed8; --accent2:#2563eb; --ok:#16a34a; --warn:#c98a14; --err:#dc2626;
+  --shadow:0 8px 28px rgba(17,24,39,.08);
+}
+[data-theme="dark"]{
+  --bg:#0d1117; --bg2:#131a24; --panel:#161d29; --panel2:#1c2433; --line:#242e3f;
+  --tx1:#eef2f8; --tx2:#9fadc2; --tx3:#5c6a80;
+  --accent:#3b6ef0; --accent2:#4dd9c9; --ok:#3ecf8e; --warn:#f5b942; --err:#ef5a6f;
+  --shadow:0 8px 28px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--tx1);font-family:var(--mono);font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased;transition:background .2s ease,color .2s ease}
+.hidden{display:none !important}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+.skip-link{position:absolute;left:-999px;top:auto}
+.skip-link:focus{left:12px;top:12px;z-index:999;background:var(--accent);color:#fff;padding:8px 14px;border-radius:6px}
+
+#auth-overlay{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 15% 10%, rgba(29,78,216,.08), transparent 45%),radial-gradient(circle at 85% 90%, rgba(37,99,235,.07), transparent 45%),var(--bg);padding:32px 16px}
+.auth-box{width:100%;max-width:420px}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo-title{font-family:var(--disp);font-weight:700;font-size:34px;letter-spacing:.5px;color:var(--tx1)}
+.auth-logo-title span{color:var(--accent)}
+.lockup-zeevcars{font-family:'Poppins',sans-serif;font-weight:800;font-style:italic;font-size:22px;letter-spacing:-.01em;white-space:nowrap;line-height:1;}
+.lockup-zeevcars .z-part{color:var(--tx1)}
+.lockup-zeevcars .c-part{color:#7CB93F}
+.lockup-sep{color:#aab2c0;font-size:17px;font-weight:600;font-family:var(--mono);}
+.lockup-driveway{display:flex;align-items:baseline;gap:6px;white-space:nowrap;}
+.lockup-driveway-text{font-family:'Poppins',sans-serif;font-weight:800;font-size:22px;letter-spacing:-.01em;line-height:1;white-space:nowrap;}
+.lockup-driveway-text .d-part{color:var(--tx1)}
+.lockup-driveway-text .w-part{color:#7CB93F}
+.tb-brand-lockup{display:flex;align-items:baseline;gap:5px;flex-shrink:0;padding:6px 0;}
+.auth-sub{color:var(--tx2);font-size:12.5px;margin-top:6px}
+.status-dots{display:flex;gap:14px;justify-content:center;margin-top:20px;}
+.status-dot{width:15px;height:15px;border-radius:50%;background:#ff2d20;box-shadow:0 0 4px 1px #ff2d20,0 0 22px 9px rgba(255,45,32,.55);transition:background .5s ease,box-shadow .5s ease;}
+.status-dot.access-granted{background:#2ee66b;box-shadow:0 0 4px 1px #2ee66b,0 0 22px 9px rgba(46,230,107,.55);}
+.auth-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px 24px 22px;box-shadow:var(--shadow)}
+.field-hint{color:var(--tx2);font-size:12px}
+.auth-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:13.5px;letter-spacing:.02em;display:flex;align-items:center;justify-content:center}
+.auth-btn:hover{filter:brightness(1.08)}
+.auth-btn:disabled{opacity:.7;cursor:wait}
+.btn-spinner{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:spin .7s linear infinite;margin-left:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auth-err{min-height:18px;color:var(--err);font-size:12px;margin-top:12px;text-align:center}
+.auth-err.show{display:block}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:8px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;overflow-x:auto}
+.topbar::-webkit-scrollbar{height:8px}
+.topbar::-webkit-scrollbar-track{background:var(--bg2)}
+.topbar::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.topbar{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:thin}
+.tb-left{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tb-brand{font-family:var(--disp);font-weight:700;font-size:19px}
+.tb-brand span{color:var(--accent)}
+.tb-user{display:flex;align-items:center;gap:8px;font-size:11px;padding:4px 10px 4px 4px;border-radius:999px;background:var(--panel2);color:var(--tx2);border:1px solid var(--line)}
+.tb-avatar{width:20px;height:20px;border-radius:50%;object-fit:cover;background:var(--accent2)}
+.tb-scope{font-size:9.5px;padding:1px 7px;border-radius:999px;font-weight:700;letter-spacing:.03em}
+.tb-scope.full{background:rgba(22,163,74,.18);color:var(--ok)}
+.tb-scope.restricted{background:rgba(201,138,20,.18);color:var(--warn)}
+.tb-right{display:flex;align-items:center;gap:5px;flex-wrap:nowrap;flex-shrink:0}
+.tb-sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.tb-btn{width:98px;height:28px;padding:0 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel2);color:var(--tx1);font-size:10px;font-weight:500;display:inline-flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tb-btn:hover{border-color:var(--accent)}
+.tb-btn.p1{background:var(--accent);border-color:var(--accent);color:#fff}
+.tb-btn.danger{color:var(--err)}
+.param-text{color:var(--tx2);font-size:12px}
+
+.fleet{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 22px;background:var(--bg2);border-bottom:1px solid var(--line)}
+.fleet-label{font-size:10px;letter-spacing:.1em;color:var(--tx3)}
+.ft{font-size:10.5px;padding:3px 8px;border-radius:5px;background:var(--panel2);color:var(--tx2);border:1px solid var(--line)}
+.ft.offline-badge{color:var(--err);border-color:rgba(220,38,38,.4)}
+
+.nav{display:flex;gap:2px;padding:0 22px;background:var(--bg2);border-bottom:1px solid var(--line);overflow-x:auto}
+.nav::-webkit-scrollbar{height:14px}
+.nav::-webkit-scrollbar-track{background:var(--bg2)}
+.nav::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.nav{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:auto}
+.ntab{padding:13px 16px;background:transparent;border:none;color:var(--tx2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.ntab:hover{color:var(--tx1)}
+.ntab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+main{padding:22px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.bandeau{padding:12px 16px;border-radius:var(--radius);font-size:12.5px;margin-bottom:18px;border:1px solid var(--line);line-height:1.6}
+.bandeau-ok{background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.3)}
+.bandeau-warn{background:rgba(201,138,20,.08);border-color:rgba(201,138,20,.35)}
+.bandeau-info{background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
+.bandeau-err{background:rgba(220,38,38,.08);border-color:rgba(220,38,38,.35)}
+.admin-section-title{font-family:var(--disp);font-weight:700;font-size:14px;margin:22px 0 12px;padding-left:10px;border-left:3px solid var(--accent)}
+.admin-partner-list{display:flex;flex-direction:column;gap:12px;margin-bottom:8px}
+.admin-partner-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.admin-partner-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.admin-partner-key{font-size:10px;letter-spacing:.06em;color:var(--tx3);font-family:var(--mono)}
+.admin-partner-head h4{margin:2px 0 6px;font-family:var(--disp);font-size:15px}
+
+.params-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.card{flex:1;min-width:220px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.card label{display:flex;align-items:center;gap:6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px}
+.rate-display{font-family:var(--disp);font-size:20px;font-weight:700}
+
+.actions-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.kpi-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.kpi{flex:1;min-width:170px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.kpi .k-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px}
+.kpi .k-value{font-family:var(--disp);font-size:24px;font-weight:700}
+.kpi .k-sub{font-size:11px;color:var(--tx2);margin-top:4px}
+.kpi.accent .k-value{color:var(--accent)}
+.kpi.ok .k-value{color:var(--ok)}
+.kpi.warn .k-value{color:var(--warn)}
+
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.toolbar select,.toolbar input{padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:12.5px;min-width:160px}
+.btn{padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--tx1);font-size:12.5px;font-weight:500}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.ghost{background:transparent}
+.btn.danger-o{color:var(--err);border-color:rgba(220,38,38,.4)}
+.btn.small{padding:5px 10px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.table-wrap{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto}
+.table-wrap::-webkit-scrollbar{height:14px}
+.table-wrap::-webkit-scrollbar-track{background:var(--bg2);border-radius:8px}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.table-wrap{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
+.data-table thead th{text-align:left;padding:11px 14px;background:var(--panel2);color:var(--tx3);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0}
+.data-table tbody td{padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.data-table tbody tr:last-child td{border-bottom:none}
+.data-table tbody tr:hover{background:var(--panel2)}
+.data-table td input,.data-table td select{width:100%;min-width:90px;padding:6px 8px;background:var(--bg2);border:1px solid transparent;border-radius:5px;color:var(--tx1);font-size:12px}
+.data-table td input:focus,.data-table td select:focus{border-color:var(--accent)}
+.data-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+.data-table td.actions{white-space:nowrap;text-align:right}
+.data-table td.chk{text-align:center;width:32px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:600}
+.pill.ok{background:rgba(22,163,74,.15);color:var(--ok)}
+.pill.warn{background:rgba(201,138,20,.15);color:var(--warn)}
+.pill.err{background:rgba(220,38,38,.15);color:var(--err)}
+.pill.info{background:rgba(37,99,235,.15);color:var(--accent2)}
+.brand-chip{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10.5px;background:var(--panel2);border:1px solid var(--line);color:var(--tx2);margin:1px 2px 1px 0}
+.empty-row td{text-align:center;color:var(--tx3);padding:26px 14px;font-style:italic}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(6,9,14,.6);display:flex;align-items:flex-start;justify-content:center;z-index:200;overflow-y:auto;padding:40px 16px}
+.modal-box{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 24px}
+.modal-box.wide{max-width:860px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-head h3{margin:0;font-family:var(--disp);font-size:17px}
+.modal-close{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--tx2);font-size:14px}
+.modal-close:hover{color:var(--err);border-color:var(--err)}
+.modal-body{max-height:70vh;overflow-y:auto}
+.form-row{margin-bottom:13px}
+.form-row label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:6px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:9px 11px;background:var(--bg2);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:13px}
+.form-row textarea{resize:vertical;min-height:60px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.modal-note{font-size:11.5px;color:var(--tx2);line-height:1.6;margin-bottom:16px;padding:10px 12px;background:var(--panel2);border-radius:8px;border:1px solid var(--line)}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.collab-list{list-style:none;margin:0;padding:0}
+.collab-list li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.collab-list li:last-child{border-bottom:none}
+.collab-avatar{width:30px;height:30px;border-radius:50%;background:var(--panel2)}
+.invoice-total-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--panel2);border-radius:8px;margin:12px 0;font-size:13px}
+.invoice-total-bar strong{font-family:var(--disp);font-size:17px;color:var(--accent)}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:grid;grid-template-columns:160px 1fr 70px;gap:10px;align-items:center;font-size:11.5px}
+.bar-row .bar-label{color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{height:9px;background:var(--panel2);border-radius:5px;overflow:hidden}
+.bar-fill{height:100%;background:var(--accent);border-radius:5px}
+.bar-row .bar-val{text-align:right;font-variant-numeric:tabular-nums}
+
+.appfooter{padding:12px 22px;border-top:1px solid var(--line);background:var(--bg2);color:var(--tx3);font-size:11px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 18px;font-size:12.5px;color:var(--tx1);box-shadow:var(--shadow);z-index:300}
+.toast.err{border-color:var(--err);color:var(--err)}
+.toast.ok{border-color:var(--ok);color:var(--ok)}
+
+#print-invoice-area{display:none}
+@media print{
+  body *{visibility:hidden}
+  #print-invoice-area, #print-invoice-area *{visibility:visible}
+  #print-invoice-area{display:block;position:absolute;top:0;left:0;width:100%;padding:20px;color:#000;background:#fff}
+  #print-invoice-area table{width:100%;border-collapse:collapse}
+  #print-invoice-area th,#print-invoice-area td{border:1px solid #999;padding:6px 8px;font-size:12px}
+}
+@media (max-width:760px){
+  main{padding:14px} .data-table{min-width:640px} .form-grid{grid-template-columns:1fr}
+}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important;animation:none !important} }
+</style>
+</head>
+<body>
+<a href="#main-content" class="skip-link">Aller au contenu principal</a>
+
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div style="display:flex;align-items:baseline;justify-content:center;gap:6px;flex-wrap:nowrap;padding:6px 0;">
+        <span class="lockup-zeevcars"><span class="z-part">Zeev</span><span class="c-part">Cars</span></span>
+        <span class="lockup-sep">x</span>
+        <span class="lockup-driveway">
+          <span class="lockup-driveway-text"><span class="d-part">Drive</span><span class="w-part">Way</span></span>
+        </span>
+      </div>
+      <p class="auth-sub" style="margin-top:2px;">Gestionnaire d'affaires</p>
+      <div class="status-dots" id="status-dots">
+        <span class="status-dot"></span><span class="status-dot"></span><span class="status-dot"></span><span class="status-dot"></span><span class="status-dot"></span>
+      </div>
+    </div>
+    <div class="auth-card">
+      <p class="field-hint" style="margin-bottom:18px;display:block;">
+        La connexion se fait avec votre compte GitHub. Si vous n'avez pas encore accès,
+        demandez à l'administrateur de vous ajouter comme collaborateur sur le dépôt de
+        données — voir la documentation.
+      </p>
+      <button id="login-btn" class="auth-btn" type="button">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;margin-right:8px;">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        <span class="btn-label">Se connecter avec GitHub</span>
+        <span class="btn-spinner hidden"></span>
+      </button>
+      <div id="login-error" class="auth-err" role="alert"></div>
+    </div>
+  </div>
+</div>
+
+<div id="app-screen" class="hidden">
+  <header class="topbar">
+    <div class="tb-left">
+      <div class="tb-brand-lockup">
+        <span class="lockup-zeevcars" style="font-size:16px;"><span class="z-part">Zeev</span><span class="c-part">Cars</span></span>
+        <span class="lockup-sep" style="font-size:13px;">x</span>
+        <span class="lockup-driveway">
+          <span class="lockup-driveway-text" style="font-size:16px;"><span class="d-part">Drive</span><span class="w-part">Way</span></span>
+        </span>
+      </div>
+      <span class="tb-user" id="current-user-badge">—</span>
+    </div>
+    <div class="tb-right">
+      <span id="sync-status" class="param-text">—</span>
+      <div class="tb-sep"></div>
+      <button id="theme-btn" class="tb-btn">Thème sombre</button>
+      <button id="reload-btn" class="tb-btn">Recharger</button>
+      <button id="save-btn" class="tb-btn p1">Enregistrer sur GitHub</button>
+      <button id="print-btn" class="tb-btn">Imprimer</button>
+      <button id="collab-btn" class="tb-btn hidden">Collaborateurs</button>
+      <button id="export-csv-btn" class="tb-btn hidden">Export CSV</button>
+      <div class="tb-sep"></div>
+      <button id="logout-btn" class="tb-btn danger">Déconnexion</button>
+    </div>
+  </header>
+
+  <div class="fleet" id="fleet-bar">
+    <span class="fleet-label">SOURCES</span>
+    <span class="ft">ALPHABET</span><span class="ft">ATHLON</span>
+    <span style="color:var(--tx3)">·</span><span class="ft">SIEMENS ENERGY x DRIVEWAY</span>
+    <span style="color:var(--tx3)">·</span><span class="ft" id="fleet-count-badge">— concessions</span>
+  </div>
+
+  <nav class="nav" id="nav-tabs"></nav>
+  <main id="main-content"></main>
+  <footer class="appfooter"><span id="footer-info">—</span></footer>
+</div>
+
+<!-- MODALE — AJOUTER UN VEHICULE -->
+<div id="modal-vehicle" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Ajouter un véhicule</h3><button class="modal-close" data-close="modal-vehicle">✕</button></div>
+    <div class="modal-body">
+      <div class="modal-note">La concession est déjà déterminée par l'onglet depuis lequel vous ouvrez ce formulaire (<strong id="vehicle-modal-partner-name">—</strong>). Le véhicule est ajouté à la liste de travail ; cliquez ensuite sur « Enregistrer sur GitHub » pour le conserver.</div>
+      <div class="form-grid">
+        <div class="form-row"><label for="v-leasing">Société de leasing</label><input type="text" id="v-leasing" placeholder="ex : Alphabet, Athlon, direct..."></div>
+        <div class="form-row"><label for="v-numcontrat">N° contrat / commande</label><input type="text" id="v-numcontrat"></div>
+      </div>
+      <div class="form-row"><label for="v-client">Client (entité Siemens) *</label><input type="text" id="v-client"></div>
+      <div class="form-row"><label for="v-conducteur">Conducteur</label><input type="text" id="v-conducteur"></div>
+      <div class="form-row"><label for="v-modele">Modèle / Version</label><input type="text" id="v-modele"></div>
+      <div class="form-grid">
+        <div class="form-row"><label for="v-immat">Immatriculation</label><input type="text" id="v-immat"></div>
+        <div class="form-row"><label for="v-vin">VIN / N° de série</label><input type="text" id="v-vin"></div>
+      </div>
+      <div class="form-row">
+        <label for="v-statut">Statut livraison</label>
+        <select id="v-statut">
+          <option value="COMMANDE">Commandé — en attente de livraison</option>
+          <option value="LIVRE">Livré</option>
+          <option value="NON_LIVRE">Non livré</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label for="v-date-prevue">Date livraison prévue</label><input type="date" id="v-date-prevue"></div>
+        <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="date" id="v-date-effective"></div>
+      </div>
+      <div class="form-row"><label for="v-statut-source">Statut véhicule (source)</label><input type="text" id="v-statut-source" placeholder="ex : Vehicle On Order, Préparation - Résa..."></div>
+      <div class="form-row"><label for="v-remarques">Remarques</label><textarea id="v-remarques"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" data-close="modal-vehicle">Annuler</button><button class="btn primary" id="vehicle-submit-btn">Ajouter à la liste</button></div>
+  </div>
+</div>
+
+<!-- MODALE — FACTURE CONSOLIDEE -->
+<div id="modal-invoice" class="modal-overlay hidden">
+  <div class="modal-box wide">
+    <div class="modal-head"><h3>Facture consolidée — <span id="invoice-modal-partner-name">—</span></h3><button class="modal-close" data-close="modal-invoice">✕</button></div>
+    <div class="modal-body">
+      <div class="modal-note">Sélectionnez les véhicules livrés à regrouper sur une seule facture. Document de travail destiné à votre outil de facturation — pas une facture légale émise automatiquement.</div>
+      <div class="form-grid">
+        <div class="form-row"><label for="inv-number">N° de facture</label><input type="text" id="inv-number"></div>
+        <div class="form-row"><label for="inv-date">Date d'émission</label><input type="date" id="inv-date"></div>
+      </div>
+      <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="date" id="inv-due"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
+      <div class="table-wrap"><table class="data-table" id="invoice-vehicle-table"></table></div>
+      <div class="invoice-total-bar"><span>Total sélectionné : <strong id="invoice-total">0,00 €</strong></span><button class="btn small" id="invoice-select-all">Tout sélectionner</button></div>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" data-close="modal-invoice">Fermer</button><button class="btn primary" id="invoice-print-btn">Générer et imprimer la facture</button></div>
+  </div>
+</div>
+
+<!-- MODALE — ANALYSE PARC CLIENT -->
+<div id="modal-analysis" class="modal-overlay hidden">
+  <div class="modal-box wide">
+    <div class="modal-head"><h3>Analyse parc client — <span id="analysis-modal-partner-name">—</span></h3><button class="modal-close" data-close="modal-analysis">✕</button></div>
+    <div class="modal-body" id="analysis-modal-body"></div>
+    <div class="modal-foot"><button class="btn ghost" data-close="modal-analysis">Fermer</button></div>
+  </div>
+</div>
+
+<!-- MODALE — COLLABORATEURS -->
+<div id="modal-collab" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Collaborateurs</h3><button class="modal-close" data-close="modal-collab">✕</button></div>
+    <div class="modal-body">
+      <div class="modal-note">Cette liste reflète les collaborateurs du dépôt GitHub de données. L'ajout, le retrait ou le changement de niveau d'accès se fait uniquement sur github.com — les modifications y sont immédiatement répercutées ici.</div>
+      <ul class="collab-list" id="collab-list"><li>Chargement...</li></ul>
+    </div>
+    <div class="modal-foot"><a class="btn primary" id="collab-manage-link" href="#" target="_blank" rel="noopener">Gérer les accès sur GitHub →</a></div>
+  </div>
+</div>
+
+<div id="print-invoice-area"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   CONFIGURATION — A ADAPTER APRES DEPLOIEMENT DU WORKER (voir DEPLOIEMENT.md)
+   ===================================================================== */
+const CONFIG = {
+  apiBase: "https://zeev-cars-api-driveway.4wg2rh4rhp.workers.dev",
+  githubOAuthClientId: "Ov23liK2WpeDu2nKUT3v",
+};
+
+const STATUT_LABELS = { COMMANDE:"Commandé — en attente de livraison", LIVRE:"Livré", NON_LIVRE:"Non livré" };
+const state = { user:null, sessionToken:null, scope:null, partners:[], vehicles:[], dirty:false, activeTab:null, theme:"light" };
+
+var $ = function(s){ return document.querySelector(s); };
+var $all = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+function uid(p){ return p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €"; }
+function fmtPct(n){ if (n==null) return "—"; n = Number(n)||0; return (Math.round(n*100)/100).toString().replace(".", ",") + " %"; }
+function escapeAttr(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function escapeHtml(s){ return escapeAttr(s); }
+function todayIso(){ return new Date().toISOString().slice(0,10); }
+function addDaysIso(iso, days){ var d = iso ? new Date(iso) : new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+
+function toast(msg, kind){
+  var el = $("#toast");
+  el.textContent = msg; el.className = "toast" + (kind?" "+kind:"");
+  el.classList.remove("hidden");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ el.classList.add("hidden"); }, 3400);
+}
+function markDirty(){ state.dirty = true; var s=$("#sync-status"); s.textContent="Modifications non enregistrées"; s.style.color="var(--warn)"; }
+function markClean(){ state.dirty = false; var s=$("#sync-status"); s.textContent="Synchronisé"; s.style.color="var(--ok)"; }
+
+/* =====================================================================
+   APPELS AU WORKER — seul point de contact reseau
+   ===================================================================== */
+function isApiConfigured(){ return CONFIG.apiBase && !CONFIG.apiBase.includes("VOTRE-SOUS-DOMAINE"); }
+async function apiCall(path, opts){
+  opts = opts || {};
+  if (!isApiConfigured()) throw new Error("Configuration manquante : renseignez CONFIG.apiBase (voir DEPLOIEMENT.md).");
+  var headers = { "Content-Type":"application/json" };
+  if (opts.auth !== false && state.sessionToken) headers["Authorization"] = "Bearer " + state.sessionToken;
+  var res = await fetch(CONFIG.apiBase + path, { method: opts.method||"GET", headers: headers, body: opts.body?JSON.stringify(opts.body):undefined });
+  var j = await res.json().catch(function(){ return {}; });
+  if (!res.ok) throw new Error(j.error || ("Erreur réseau (" + res.status + ")."));
+  return j;
+}
+const apiLoginGithub = function(code, redirectUri){ return apiCall("/api/login-github", { method:"POST", body:{ code:code, redirectUri:redirectUri }, auth:false }); };
+const apiGetData = function(){ return apiCall("/api/data"); };
+const apiSaveData = function(payload){ return apiCall("/api/data", { method:"POST", body:payload }); };
+const apiGetCollaborators = function(){ return apiCall("/api/collaborators"); };
+async function apiExportCsv(){
+  if (!isApiConfigured()) throw new Error("Configuration manquante : renseignez CONFIG.apiBase.");
+  var res = await fetch(CONFIG.apiBase + "/api/export", { headers:{ "Authorization":"Bearer " + state.sessionToken } });
+  if (!res.ok){ var e = await res.json().catch(function(){return {};}); throw new Error(e.error || ("Erreur réseau (" + res.status + ")." )); }
+  var blob = await res.blob();
+  var disposition = res.headers.get("Content-Disposition") || "";
+  var m = disposition.match(/filename="([^"]+)"/);
+  var filename = m ? m[1] : ("zeevcars-driveway-export-" + todayIso() + ".csv");
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+/* =====================================================================
+   LOGIN — OAuth GitHub (Authorization Code flow)
+   ===================================================================== */
+const OAUTH_STATE_KEY = "zcd_oauth_state";
+function oauthRedirectUri(){ return window.location.origin + window.location.pathname; }
+
+function startGithubLogin(){
+  var errEl = $("#login-error"); errEl.classList.remove("show"); errEl.textContent = "";
+  if (!CONFIG.githubOAuthClientId || CONFIG.githubOAuthClientId.includes("COLLEZ_ICI")){
+    errEl.textContent = "Configuration manquante : renseignez CONFIG.githubOAuthClientId (voir DEPLOIEMENT.md).";
+    errEl.classList.add("show"); return;
+  }
+  var state_ = crypto.randomUUID();
+  try { sessionStorage.setItem(OAUTH_STATE_KEY, state_); } catch(e){}
+  var params = new URLSearchParams({ client_id: CONFIG.githubOAuthClientId, redirect_uri: oauthRedirectUri(), scope:"read:user", state: state_ });
+  window.location.href = "https://github.com/login/oauth/authorize?" + params.toString();
+}
+
+async function handleGithubCallback(){
+  var params = new URLSearchParams(window.location.search);
+  var code = params.get("code"), oauthState = params.get("state");
+  if (!code) return false;
+  var cleanUrl = oauthRedirectUri();
+  window.history.replaceState({}, document.title, cleanUrl);
+
+  var saved = null;
+  try { saved = sessionStorage.getItem(OAUTH_STATE_KEY); sessionStorage.removeItem(OAUTH_STATE_KEY); } catch(e){}
+  if (saved && oauthState && saved !== oauthState){ showLoginError("Connexion refusée (anomalie de sécurité OAuth). Réessayez."); return true; }
+
+  setLoginLoading(true);
+  try {
+    var r = await apiLoginGithub(code, cleanUrl);
+    persistSession(r.token, r.user);
+    await bootApp();
+  } catch(e){
+    showLoginError(e.message || "Connexion impossible.");
+  } finally {
+    setLoginLoading(false);
+  }
+  return true;
+}
+function persistSession(token, user){
+  state.sessionToken = token; state.user = user; state.scope = user.scope || (user.isOwner?"FULL":null);
+  try { localStorage.setItem("zcd_session", token); localStorage.setItem("zcd_user", JSON.stringify(user)); } catch(e){}
+}
+function showLoginError(msg){ var e = $("#login-error"); e.textContent = msg; e.classList.add("show"); }
+function setLoginLoading(loading){
+  var btn = $("#login-btn"), label = btn.querySelector(".btn-label"), spinner = btn.querySelector(".btn-spinner");
+  btn.disabled = loading;
+  if (label) label.textContent = loading ? "Connexion…" : "Se connecter avec GitHub";
+  if (spinner) spinner.classList.toggle("hidden", !loading);
+}
+function tryRestoreSession(){
+  var token = null, user = null;
+  try { token = localStorage.getItem("zcd_session"); user = JSON.parse(localStorage.getItem("zcd_user")||"null"); } catch(e){ return false; }
+  if (!token || !user) return false;
+  state.sessionToken = token; state.user = user; state.scope = user.scope;
+  return true;
+}
+function performLogout(silent){
+  if (!silent && state.dirty && !confirm("Des modifications non enregistrées seront perdues. Se déconnecter quand même ?")) return;
+  try { localStorage.removeItem("zcd_session"); localStorage.removeItem("zcd_user"); } catch(e){}
+  window.location.reload();
+}
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+function showAccessGranted(){
+  return new Promise(function(resolve){
+    $all("#status-dots .status-dot").forEach(function(d){ d.classList.add("access-granted"); });
+    setTimeout(resolve, 550);
+  });
+}
+async function bootApp(){
+  await showAccessGranted();
+  $("#auth-overlay").classList.add("hidden");
+  $("#app-screen").classList.remove("hidden");
+  renderUserBadge();
+  try {
+    var data = await apiGetData();
+    state.partners = data.partners || [];
+    state.vehicles = data.vehicles || [];
+    state.scope = data.scope || state.scope;
+    if (data.user) state.user = Object.assign({}, state.user, data.user);
+    renderUserBadge();
+    applyScopeVisibility();
+    state.activeTab = state.partners[0] ? state.partners[0].id : "all";
+    renderAll();
+    markClean();
+  } catch(e){
+    toast("Erreur de chargement : " + e.message, "err");
+    if (/session/i.test(e.message)) performLogout(true);
+  }
+}
+function renderUserBadge(){
+  var u = state.user || {};
+  var scopeCls = state.scope === "FULL" ? "full" : "restricted";
+  var scopeLbl = state.scope === "FULL" ? "FULL" : "LIVRAISON";
+  $("#current-user-badge").innerHTML =
+    (u.avatarUrl ? '<img class="tb-avatar" src="'+escapeAttr(u.avatarUrl)+'" alt="">' : '') +
+    '<span>' + escapeHtml(u.name||u.login||"—") + '</span>' +
+    '<span class="tb-scope ' + scopeCls + '">' + scopeLbl + '</span>';
+}
+function applyScopeVisibility(){
+  var full = state.scope === "FULL";
+  $("#collab-btn").classList.toggle("hidden", !(state.user && state.user.isOwner));
+  $("#export-csv-btn").classList.toggle("hidden", !full);
+}
+
+/* =====================================================================
+   HELPERS PARTENAIRES / VEHICULES
+   ===================================================================== */
+function partnerById(id){ for (var i=0;i<state.partners.length;i++) if (state.partners[i].id===id) return state.partners[i]; return null; }
+function vehiclesForPartner(id){ return state.vehicles.filter(function(v){ return v.partnerId===id; }); }
+function commissionFor(v){
+  var p = partnerById(v.partnerId);
+  if (!p || p.commissionPct == null || v.montantHT == null) return null;
+  return Number(v.montantHT||0) * Number(p.commissionPct||0) / 100;
+}
+function shortName(p){ return p.distributeur.split(" — ")[0]; }
+
+/* =====================================================================
+   NAVIGATION
+   ===================================================================== */
+function renderNavTabs(){
+  var html = state.partners.map(function(p){
+    return '<button class="ntab'+(state.activeTab===p.id?" active":"")+'" data-tab="'+p.id+'">Facturation '+escapeHtml(shortName(p))+'</button>';
+  }).join("");
+  html += '<button class="ntab'+(state.activeTab==="all"?" active":"")+'" data-tab="all">Tous les véhicules commandés</button>';
+  html += '<button class="ntab'+(state.activeTab==="dashboard"?" active":"")+'" data-tab="dashboard">Tableau de bord</button>';
+  if (state.user && state.user.isOwner){
+    html += '<button class="ntab'+(state.activeTab==="admin"?" active":"")+'" data-tab="admin">⚙ Admin</button>';
+  }
+  $("#nav-tabs").innerHTML = html;
+  $all("#nav-tabs .ntab").forEach(function(b){ b.addEventListener("click", function(){ state.activeTab = b.dataset.tab; renderAll(); }); });
+}
+
+/* =====================================================================
+   PANEL PARTENAIRE
+   ===================================================================== */
+function kpiCard(label, value, sub, cls){
+  return '<div class="kpi '+(cls||"")+'"><div class="k-label">'+label+'</div><div class="k-value">'+value+'</div>'+(sub?'<div class="k-sub">'+sub+'</div>':'')+'</div>';
+}
+function statutPill(s){
+  if (s === "LIVRE") return '<span class="pill ok">Livré</span>';
+  if (s === "NON_LIVRE") return '<span class="pill err">Non livré</span>';
+  return '<span class="pill warn">Commandé</span>';
+}
+
+function renderPartnerPanel(p){
+  var full = state.scope === "FULL";
+  var list = vehiclesForPartner(p.id);
+  var caHt = list.reduce(function(s,v){ return s + Number(v.montantHT||0); }, 0);
+  var commission = full ? list.reduce(function(s,v){ var c=commissionFor(v); return s+(c||0); }, 0) : null;
+  var livres = list.filter(function(v){ return v.statutLivraison === "LIVRE"; });
+  var nonLivres = list.length - livres.length;
+  var facturables = livres.filter(function(v){ return v.statutFacturation !== "FACTURE"; });
+
+  var commissionEncaissee = 0, commissionEnAttente = 0, retardsJours = [];
+  if (full){
+    list.forEach(function(v){
+      var c = commissionFor(v);
+      if (c == null) return;
+      if (v.statutPaiement === "PAYE") commissionEncaissee += c;
+      else commissionEnAttente += c;
+      if (v.statutFacturation === "FACTURE" && v.dateFacture && v.statutPaiement !== "PAYE"){
+        var jours = Math.floor((Date.now() - new Date(v.dateFacture+"T00:00:00").getTime()) / 86400000);
+        if (jours >= 0) retardsJours.push(jours);
+      }
+    });
+  }
+  var delaiMoyen = retardsJours.length ? Math.round(retardsJours.reduce(function(a,b){return a+b;},0) / retardsJours.length) : null;
+
+  var datesLivrees = livres.map(function(v){ return v.dateLivraisonEffective; }).filter(Boolean).sort();
+  var estimationAnnuelle = null, estimationSub = "historique insuffisant pour projeter";
+  if (full && datesLivrees.length && commission){
+    var moisSpan = Math.max(1, Math.round((new Date(datesLivrees[datesLivrees.length-1]) - new Date(datesLivrees[0])) / (30*86400000)) + 1);
+    if (moisSpan >= 2){ estimationAnnuelle = commission / moisSpan * 12; estimationSub = "projection sur " + moisSpan + " mois d'historique"; }
+  }
+
+  var rateBlock = full
+    ? '<span class="rate-display">' + fmtPct(p.commissionPct) + '</span>'
+    : '<span class="param-text">Masqué — accès restreint (Livraison uniquement)</span>';
+
+  var html = '<section class="tab-panel active">' +
+    '<div class="bandeau bandeau-ok">Entité à facturer : <strong>' + escapeHtml(p.distributeur.toUpperCase()) + '</strong>' +
+      (p.siren ? ' — SIREN ' + escapeHtml(p.siren) : '') + ' — SIRET ' + escapeHtml(p.siret) + '<br>' +
+      escapeHtml(p.adresse) + ', ' + escapeHtml(p.cp) + ' ' + escapeHtml(p.ville) +
+      (p.telephoneStandard ? ' — Tél. ' + escapeHtml(p.telephoneStandard) : '') +
+      (full && p.signedDate ? ' — Convention signée le <strong>' + p.signedDate + '</strong>' + (p.contratRef ? ' (' + escapeHtml(p.contratRef) + ')' : '') : '') + '</div>' +
+    (full && p.perimetreContrat ? '<div class="bandeau bandeau-warn">' + escapeHtml(p.perimetreContrat) + '</div>' : '') +
+    '<div class="params-row">' +
+      '<div class="card"><label>🔒 Taux de commission contractuel</label>' + rateBlock + '</div>' +
+      '<div class="card"><label>Base de calcul</label><span class="param-text">LLD/LOA : montant HT total du contrat de location signé</span></div>' +
+      '<div class="card"><label>Condition de déclenchement</label><span class="param-text">' + escapeHtml((full && p.conditionDeclenchement) || "Livraison effective + PV de mise à disposition signé") + '</span></div>' +
+    '</div>' +
+    '<div class="actions-row">' +
+      '<button class="btn primary" data-open-vehicle="'+p.id+'">Ajouter un véhicule</button>' +
+      (full ? '<button class="btn" data-open-invoice="'+p.id+'">Facture consolidée</button>' : '') +
+      '<button class="btn" data-open-analysis="'+p.id+'">Analyse client</button>' +
+    '</div>' +
+    '<div class="kpi-row">' +
+      kpiCard("Total véhicules", list.length, "", "accent") +
+      kpiCard("Livrés", livres.length, "", "ok") +
+      kpiCard("Non livrés", nonLivres, "", nonLivres ? "warn" : "") +
+      (full ? kpiCard("Facturables", facturables.length, "livrés non encore facturés", "accent") : "") +
+      (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "") : "") +
+      (full ? kpiCard("Commission HT totale", fmtMoney(commission), "", "warn") : "") +
+    '</div>' +
+    (full ? '<div class="kpi-row">' +
+      kpiCard("Commission encaissée", fmtMoney(commissionEncaissee), "", "ok") +
+      kpiCard("Commission en attente", fmtMoney(commissionEnAttente), "", "warn") +
+      kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "") +
+      kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "") +
+    '</div>' : '') +
+    '<div class="table-wrap"><table class="data-table" id="table-partner-'+p.id+'"></table></div>' +
+  '</section>';
+
+  $("#main-content").innerHTML = html;
+  renderVehicleTable("#table-partner-"+p.id, list, true);
+  bindPanelActions();
+}
+
+const STATUT_PAIEMENT_LABELS = { A_VERIFIER:"À vérifier", IMPAYE:"Impayé", PAYE:"Payé" };
+function eligibiliteFacturation(v){
+  if (v.statutLivraison !== "LIVRE") return { label:"En attente livraison", cls:"warn" };
+  if (!v.statutPaiement || v.statutPaiement === "A_VERIFIER") return { label:"Livré — paiement à vérifier", cls:"info" };
+  if (v.statutPaiement !== "PAYE") return { label:"En attente paiement", cls:"warn" };
+  return { label:"Éligible facturation", cls:"ok" };
+}
+
+function renderVehicleTable(sel, list, editable){
+  var full = state.scope === "FULL";
+  var head = "<thead><tr><th>Client</th><th>Conducteur</th><th>Société leasing</th><th>Modèle / Version</th><th>Immatriculation</th><th>VIN</th><th>N° contrat</th><th>Statut véhicule (source)</th><th>Statut livraison</th><th>Date prévue</th><th>Date effective</th>" +
+    (full ? "<th>Montant HT</th><th>Commission</th><th>Statut paiement</th><th>Éligibilité facturation</th>" : "") + (editable ? "<th></th>" : "") + "</tr></thead>";
+  var body = "";
+  if (!list.length){
+    body = '<tr class="empty-row"><td colspan="16">Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».</td></tr>';
+  } else {
+    list.forEach(function(v){
+      var elig = eligibiliteFacturation(v);
+      if (editable){
+        body += '<tr data-id="'+v.id+'">' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="client" value="'+escapeAttr(v.client)+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="conducteur" value="'+escapeAttr(v.conducteur)+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="societeLeasing" value="'+escapeAttr(v.societeLeasing)+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="modele" value="'+escapeAttr(v.modele)+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="immatriculation" value="'+escapeAttr(v.immatriculation)+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="vin" value="'+escapeAttr(v.vin)+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="numeroContrat" value="'+escapeAttr(v.numeroContrat)+'" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="statutVehiculeSource" value="'+escapeAttr(v.statutVehiculeSource)+'" class="v-edit"></td>' +
+          '<td><select data-id="'+v.id+'" data-field="statutLivraison" class="v-edit">' +
+            Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'"'+(v.statutLivraison===k?" selected":"")+'>'+STATUT_LABELS[k]+'</option>'; }).join("") +
+          '</select></td>' +
+          '<td><input type="date" data-id="'+v.id+'" data-field="dateLivraisonPrevue" value="'+(v.dateLivraisonPrevue||"")+'" class="v-edit"></td>' +
+          '<td><input type="date" data-id="'+v.id+'" data-field="dateLivraisonEffective" value="'+(v.dateLivraisonEffective||"")+'" class="v-edit"></td>' +
+          (full ? '<td class="num"><input type="number" step="0.01" min="0" data-id="'+v.id+'" data-field="montantHT" value="'+(v.montantHT!=null?v.montantHT:"")+'" class="v-edit" style="text-align:right"></td>' +
+                  '<td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
+                  '<td><select data-id="'+v.id+'" data-field="statutPaiement" class="v-edit">' +
+                    Object.keys(STATUT_PAIEMENT_LABELS).map(function(k){ return '<option value="'+k+'"'+(v.statutPaiement===k?" selected":"")+'>'+STATUT_PAIEMENT_LABELS[k]+'</option>'; }).join("") +
+                  '</select></td>' +
+                  '<td><span class="pill '+elig.cls+'">'+elig.label+'</span></td>' : '') +
+          '<td class="actions"><button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td>' +
+        '</tr>';
+      } else {
+        var p = partnerById(v.partnerId);
+        body += '<tr><td>'+escapeHtml(p?p.distributeur:"—")+'</td><td>'+escapeHtml(v.client)+'</td><td>'+escapeHtml(v.conducteur)+'</td>' +
+          '<td>'+escapeHtml(v.societeLeasing)+'</td><td>'+escapeHtml(v.modele)+'</td>' +
+          '<td>'+escapeHtml(v.immatriculation)+'</td><td>'+escapeHtml(v.vin)+'</td><td>'+escapeHtml(v.numeroContrat)+'</td>' +
+          '<td>'+escapeHtml(v.statutVehiculeSource)+'</td><td>'+statutPill(v.statutLivraison)+'</td>' +
+          '<td>'+(v.dateLivraisonPrevue||"—")+'</td><td>'+(v.dateLivraisonEffective||"—")+'</td>' +
+          (full ? '<td class="num">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td><td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
+                  '<td>'+(STATUT_PAIEMENT_LABELS[v.statutPaiement]||"—")+'</td><td><span class="pill '+elig.cls+'">'+elig.label+'</span></td>' : '') + '</tr>';
+      }
+    });
+  }
+  var table = $(sel);
+  table.innerHTML = head + "<tbody>" + body + "</tbody>";
+  if (editable){
+    $all(sel+" .v-edit").forEach(function(i){ i.addEventListener("input", function(){ handleVehicleEdit(i); }); i.addEventListener("change", function(){ handleVehicleEdit(i); }); });
+    $all(sel+" [data-del-vehicle]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        if (!confirm("Supprimer ce véhicule ?")) return;
+        state.vehicles = state.vehicles.filter(function(v){ return v.id !== btn.dataset.delVehicle; });
+        markDirty(); renderAll();
+      });
+    });
+  }
+}
+function handleVehicleEdit(input){
+  var v = null;
+  for (var i=0;i<state.vehicles.length;i++) if (state.vehicles[i].id===input.dataset.id){ v=state.vehicles[i]; break; }
+  if (!v) return;
+  var field = input.dataset.field, val = input.value;
+  if (field === "montantHT") val = parseFloat(val) || 0;
+  v[field] = val;
+  markDirty();
+  var p = partnerById(state.activeTab);
+  if (p) renderVehicleTable("#table-partner-"+p.id, vehiclesForPartner(p.id), true);
+  renderNavTabs();
+}
+function bindPanelActions(){
+  $all("[data-open-vehicle]").forEach(function(b){ b.addEventListener("click", function(){ openVehicleModal(b.dataset.openVehicle); }); });
+  $all("[data-open-invoice]").forEach(function(b){ b.addEventListener("click", function(){ openInvoiceModal(b.dataset.openInvoice); }); });
+  $all("[data-open-analysis]").forEach(function(b){ b.addEventListener("click", function(){ openAnalysisModal(b.dataset.openAnalysis); }); });
+}
+
+/* =====================================================================
+   VUES GLOBALES
+   ===================================================================== */
+function renderAllVehiclesPanel(){
+  var full = state.scope === "FULL";
+  $("#main-content").innerHTML =
+    '<section class="tab-panel active">' +
+      '<div class="bandeau bandeau-info">Vue consolidée de tous les véhicules suivis, tous partenaires confondus.</div>' +
+      '<div class="kpi-row" id="kpi-all"></div>' +
+      '<div class="toolbar"><select id="all-filter-partner"><option value="">Tous les partenaires</option>' +
+        state.partners.map(function(p){ return '<option value="'+p.id+'">'+escapeHtml(p.distributeur)+'</option>'; }).join("") + '</select>' +
+        '<select id="all-filter-statut"><option value="">Tous statuts</option>' +
+        Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select></div>' +
+      '<div class="table-wrap"><table class="data-table" id="table-all-vehicles"></table></div>' +
+    '</section>';
+  function refresh(){
+    var pf = $("#all-filter-partner").value, sf = $("#all-filter-statut").value;
+    var list = state.vehicles.filter(function(v){ if (pf && v.partnerId!==pf) return false; if (sf && v.statutLivraison!==sf) return false; return true; });
+    renderVehicleTable("#table-all-vehicles", list, false);
+    var caHt = list.reduce(function(s,v){ return s+Number(v.montantHT||0); }, 0);
+    var commission = full ? list.reduce(function(s,v){ var c=commissionFor(v); return s+(c||0); }, 0) : null;
+    var livres = list.filter(function(v){ return v.statutLivraison==="LIVRE"; });
+    $("#kpi-all").innerHTML = kpiCard("Véhicules réseau", list.length, "", "accent") +
+      (full ? kpiCard("CA HT total", fmtMoney(caHt), "", "") + kpiCard("Commission réseau due", fmtMoney(commission), "", "warn") : "") +
+      kpiCard("Véhicules livrés", livres.length, "sur "+list.length, "ok");
+  }
+  $("#all-filter-partner").addEventListener("change", refresh);
+  $("#all-filter-statut").addEventListener("change", refresh);
+  refresh();
+}
+
+function renderDashboardPanel(){
+  var full = state.scope === "FULL";
+  var caHt = state.vehicles.reduce(function(s,v){ return s+Number(v.montantHT||0); }, 0);
+  var commission = full ? state.vehicles.reduce(function(s,v){ var c=commissionFor(v); return s+(c||0); }, 0) : null;
+  var livres = state.vehicles.filter(function(v){ return v.statutLivraison==="LIVRE"; }).length;
+  var commandes = state.vehicles.filter(function(v){ return v.statutLivraison==="COMMANDE"; }).length;
+  var maxCa = 0;
+  var rows = state.partners.map(function(p){
+    var list = vehiclesForPartner(p.id);
+    var ca = list.reduce(function(s,v){ return s+Number(v.montantHT||0); }, 0);
+    maxCa = Math.max(maxCa, ca);
+    return { label: shortName(p), ca: ca };
+  }).sort(function(a,b){ return b.ca-a.ca; });
+  var bars = rows.map(function(r){
+    var pct = maxCa>0 ? Math.round(r.ca/maxCa*100) : 0;
+    return '<div class="bar-row"><span class="bar-label" title="'+escapeAttr(r.label)+'">'+escapeHtml(r.label)+'</span><span class="bar-track"><span class="bar-fill" style="width:'+pct+'%"></span></span><span class="bar-val">'+(full?fmtMoney(r.ca):"—")+'</span></div>';
+  }).join("");
+  $("#main-content").innerHTML = '<section class="tab-panel active">' +
+    '<div class="bandeau bandeau-info">Tableau de bord exécutif — synthèse consolidée du réseau ZEEV CARS x DRIVEWAY.</div>' +
+    '<div class="kpi-row">' + kpiCard("Concessions partenaires", state.partners.length, "", "accent") +
+      kpiCard("Véhicules suivis", state.vehicles.length, commandes+" en attente de livraison", "") +
+      (full ? kpiCard("CA HT apporté", fmtMoney(caHt), "", "") + kpiCard("Commission réseau due", fmtMoney(commission), livres+" livré(s)", "warn") : "") + '</div>' +
+    '<div class="card"><label style="margin-bottom:14px">'+(full?"CA HT apporté par concession":"Véhicules par concession (montants masqués)")+'</label><div class="bar-chart">' + (bars||'<span class="param-text">Aucune donnée.</span>') + '</div></div>' +
+  '</section>';
+}
+
+/* =====================================================================
+   PANEL ADMIN — ajout / retrait de concessions partenaires (propriétaire uniquement)
+   Les taux de commission restent verrouilles cote Worker (PARTNER_CONTRACTS) :
+   ce panel prepare l'annuaire (cote GitHub) + genere le code a coller dans le
+   Worker pour activer le taux, exactement comme le fait le premier projet.
+   ===================================================================== */
+function renderAdminPanel(){
+  if (!state.user || !state.user.isOwner){
+    $("#main-content").innerHTML = '<section class="tab-panel active"><div class="bandeau bandeau-warn">Accès réservé au compte propriétaire (permission Admin GitHub sur le dépôt de données).</div></section>';
+    return;
+  }
+  var cards = state.partners.map(function(p){
+    var list = vehiclesForPartner(p.id);
+    var signe = !!p.signedDate;
+    return '<div class="admin-partner-card">' +
+      '<div class="admin-partner-head">' +
+        '<div><span class="admin-partner-key">'+escapeHtml(p.id.toUpperCase())+'</span><h4>'+escapeHtml(p.distributeur)+'</h4></div>' +
+        '<button class="btn small danger-o" data-remove-partner="'+p.id+'">🗑 Retirer</button>' +
+      '</div>' +
+      '<div class="param-text">' +
+        (p.siren ? 'SIREN '+escapeHtml(p.siren)+' — ' : '') + 'SIRET '+escapeHtml(p.siret)+'<br>' +
+        escapeHtml(p.adresse)+', '+escapeHtml(p.cp)+' '+escapeHtml(p.ville)+'<br>' +
+        'Taux : '+fmtPct(p.commissionPct)+' — '+list.length+' véhicule(s) enregistré(s)' +
+      '</div>' +
+      '<span class="pill '+(signe?"ok":"warn")+'" style="margin-top:8px;display:inline-block;">'+(signe?"✓ Contrat signé":"⏳ Simulation / non signé")+'</span>' +
+    '</div>';
+  }).join("");
+
+  $("#main-content").innerHTML = '<section class="tab-panel active">' +
+    '<div class="bandeau bandeau-err">⚠ <strong>Zone d\'administration — accès restreint au compte propriétaire.</strong><br>Les modifications effectuées ici impactent directement l\'application pour tous les utilisateurs.</div>' +
+    '<div class="admin-section-title">Concessions enregistrées</div>' +
+    '<div class="admin-partner-list">' + (cards || '<span class="param-text">Aucune concession enregistrée.</span>') + '</div>' +
+    '<div class="admin-section-title">Ajouter une nouvelle concession / fournisseur</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-row"><label>Clé interne (sans espace, ex : RENAULT_FRANCE)</label><input type="text" id="adm-key" placeholder="EX_CONCESSION"></div>' +
+      '<div class="form-row"><label>Nom affiché dans l\'app</label><input type="text" id="adm-nom" placeholder="Ex : Renault France"></div>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-row"><label>Raison sociale (facturation)</label><input type="text" id="adm-raison" placeholder="Ex : RENAULT SAS"></div>' +
+      '<div class="form-row"><label>Forme juridique (optionnel)</label><input type="text" id="adm-forme" placeholder="Ex : SAS au capital de 5 000 000 €"></div>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-row"><label>Adresse ligne 1</label><input type="text" id="adm-adresse1" placeholder="Ex : 13-15 Quai Le Gallo"></div>' +
+      '<div class="form-row"><label>Adresse ligne 2 (CP + ville, pays)</label><input type="text" id="adm-adresse2" placeholder="Ex : 92100 Boulogne-Billancourt, FR"></div>' +
+    '</div>' +
+    '<div class="form-grid">' +
+      '<div class="form-row"><label>SIREN</label><input type="text" id="adm-siren" placeholder="Ex : 780 129 987"></div>' +
+      '<div class="form-row"><label>SIRET</label><input type="text" id="adm-siret" placeholder="Ex : 780 129 987 00012"></div>' +
+    '</div>' +
+    '<div class="form-row" style="max-width:220px;"><label>Taux de commission (% — valeur de départ, modifiable dans le Worker)</label><input type="number" step="0.01" min="0" id="adm-taux" placeholder="Ex : 1.00"></div>' +
+    '<div class="actions-row">' +
+      '<button class="btn" id="adm-preview-btn">👁 Prévisualiser le code Worker</button>' +
+      '<button class="btn primary" id="adm-create-btn">+ Créer la concession</button>' +
+    '</div>' +
+    '<div id="adm-snippet-wrap" class="hidden">' +
+      '<div class="admin-section-title">Code à coller dans <code>worker/src/index.js</code></div>' +
+      '<div class="modal-note">Les taux de commission sont verrouillés côté Worker (jamais éditables depuis l\'app) : collez ce code dans <code>PARTNER_CONTRACTS</code> et <code>defaultPartners()</code>, puis redéployez avec <code>wrangler deploy</code>.</div>' +
+      '<textarea id="adm-snippet" readonly style="width:100%;min-height:180px;font-family:var(--mono);font-size:11.5px;background:var(--bg2);color:var(--tx1);border:1px solid var(--line);border-radius:8px;padding:12px;"></textarea>' +
+    '</div>' +
+  '</section>';
+
+  $all("[data-remove-partner]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var p = partnerById(btn.dataset.removePartner);
+      if (!p) return;
+      var nbVehicles = vehiclesForPartner(p.id).length;
+      var msg = "Retirer « " + p.distributeur + " » de l'annuaire ?" + (nbVehicles ? " (" + nbVehicles + " véhicule(s) resteront rattachés à cette concession dans les données — pensez à les réaffecter ou les supprimer.)" : "");
+      if (!confirm(msg)) return;
+      state.partners = state.partners.filter(function(x){ return x.id !== p.id; });
+      markDirty();
+      toast("Concession retirée de l'annuaire (n'oubliez pas de retirer aussi son entrée PARTNER_CONTRACTS dans le Worker).", "ok");
+      renderAll();
+    });
+  });
+
+  function buildSnippet(){
+    var key = $("#adm-key").value.trim().toUpperCase().replace(/\s+/g,"_");
+    var nom = $("#adm-nom").value.trim();
+    var raison = $("#adm-raison").value.trim() || nom;
+    var adresse1 = $("#adm-adresse1").value.trim();
+    var adresse2 = $("#adm-adresse2").value.trim();
+    var siren = $("#adm-siren").value.trim();
+    var siret = $("#adm-siret").value.trim();
+    var taux = parseFloat($("#adm-taux").value) || 0;
+    if (!key || !nom){ toast("Clé interne et nom affiché sont obligatoires.", "err"); return null; }
+    var id = "p_" + key.toLowerCase();
+    var cpVille = adresse2.split(",")[0] || "";
+    var cp = (cpVille.match(/\d{4,5}/) || [""])[0];
+    var ville = cpVille.replace(cp, "").trim();
+    var partner = { id: id, distributeur: nom, adresse: adresse1, cp: cp, ville: ville, siren: siren, siret: siret, telephoneStandard: "", marques: [], contactNom: "", contactEmail: "", contactTel: "" };
+    var snippet =
+      "// --- 1) Ajouter dans PARTNER_CONTRACTS ---\n" +
+      "  " + id + ": { commissionPct: " + taux + ", locked: true, signedDate: null, contratRef: null, perimetreContrat: null, conditionDeclenchement: null },\n\n" +
+      "// --- 2) Ajouter dans defaultPartners() ---\n" +
+      "    { id:\"" + id + "\", distributeur:\"" + nom.replace(/"/g,'\\"') + "\", adresse:\"" + adresse1.replace(/"/g,'\\"') + "\", cp:\"" + cp + "\", ville:\"" + ville.replace(/"/g,'\\"') + "\", siren:\"" + siren + "\", siret:\"" + siret + "\", telephoneStandard:\"\", marques:[], contactNom:\"\", contactEmail:\"\", contactTel:\"\" },\n\n" +
+      "// Raison sociale (facturation) : " + raison + (raison !== nom ? "" : "") + "\n" +
+      "// Puis : wrangler deploy";
+    return { partner: partner, snippet: snippet };
+  }
+
+  $("#adm-preview-btn").addEventListener("click", function(){
+    var built = buildSnippet();
+    if (!built) return;
+    $("#adm-snippet").value = built.snippet;
+    $("#adm-snippet-wrap").classList.remove("hidden");
+  });
+
+  $("#adm-create-btn").addEventListener("click", function(){
+    var built = buildSnippet();
+    if (!built) return;
+    if (partnerById(built.partner.id)){ toast("Cette clé interne existe déjà.", "err"); return; }
+    state.partners.push(built.partner);
+    markDirty();
+    $("#adm-snippet").value = built.snippet;
+    $("#adm-snippet-wrap").classList.remove("hidden");
+    toast("Concession ajoutée à l'annuaire. Copiez le code ci-dessous dans le Worker pour activer son taux, puis « Enregistrer sur GitHub ».", "ok");
+    renderNavTabs();
+  });
+}
+
+/* =====================================================================
+   MODALE — AJOUTER UN VEHICULE
+   ===================================================================== */
+function openVehicleModal(partnerId){
+  var p = partnerById(partnerId);
+  $("#vehicle-modal-partner-name").textContent = p ? p.distributeur : "—";
+  ["v-leasing","v-numcontrat","v-client","v-conducteur","v-modele","v-immat","v-vin","v-date-prevue","v-date-effective","v-statut-source","v-remarques"].forEach(function(id){ $("#"+id).value=""; });
+  $("#v-statut").value = "COMMANDE";
+  $("#vehicle-submit-btn").dataset.partnerId = partnerId;
+  openModal("modal-vehicle");
+}
+function submitVehicle(){
+  var partnerId = $("#vehicle-submit-btn").dataset.partnerId;
+  var client = $("#v-client").value.trim();
+  if (!client){ toast("Le champ Client est obligatoire.", "err"); return; }
+  state.vehicles.push({
+    id: uid("v"), partnerId: partnerId,
+    societeLeasing: $("#v-leasing").value.trim(), numeroContrat: $("#v-numcontrat").value.trim(),
+    client: client, conducteur: $("#v-conducteur").value.trim(),
+    modele: $("#v-modele").value.trim(), immatriculation: $("#v-immat").value.trim().toUpperCase(), vin: $("#v-vin").value.trim().toUpperCase(),
+    statutLivraison: $("#v-statut").value,
+    dateLivraisonPrevue: $("#v-date-prevue").value, dateLivraisonEffective: $("#v-date-effective").value,
+    statutVehiculeSource: $("#v-statut-source").value.trim(), remarques: $("#v-remarques").value.trim(),
+    montantHT: null, statutFacturation: "NON_FACTURE", statutPaiement: "A_VERIFIER", numeroFacture: "", dateFacture: ""
+  });
+  markDirty(); closeModal("modal-vehicle"); toast("Véhicule ajouté à la liste de travail.", "ok"); renderAll();
+}
+
+/* =====================================================================
+   MODALE — FACTURE CONSOLIDEE + IMPRESSION
+   ===================================================================== */
+function openInvoiceModal(partnerId){
+  var p = partnerById(partnerId);
+  $("#invoice-modal-partner-name").textContent = p ? p.distributeur : "—";
+  $("#invoice-print-btn").dataset.partnerId = partnerId;
+  $("#inv-number").value = ""; $("#inv-date").value = todayIso(); $("#inv-due").value = addDaysIso(todayIso(), 15);
+  var list = vehiclesForPartner(partnerId).filter(function(v){ return v.statutLivraison === "LIVRE"; });
+  var head = "<thead><tr><th class='chk'></th><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead>";
+  var body = list.length ? list.map(function(v){
+    return "<tr><td class='chk'><input type='checkbox' class='inv-chk' data-amount='"+(v.montantHT||0)+"' checked></td><td>"+escapeHtml(v.client)+"</td><td>"+escapeHtml(v.modele)+"</td><td>"+escapeHtml(v.immatriculation)+"</td><td class='num'>"+fmtMoney(v.montantHT)+"</td></tr>";
+  }).join("") : "<tr class='empty-row'><td colspan='5'>Aucun véhicule livré pour cette concession pour le moment.</td></tr>";
+  $("#invoice-vehicle-table").innerHTML = head + "<tbody>" + body + "</tbody>";
+  $all("#invoice-vehicle-table .inv-chk").forEach(function(c){ c.addEventListener("change", updateInvoiceTotal); });
+  updateInvoiceTotal();
+  openModal("modal-invoice");
+}
+function updateInvoiceTotal(){
+  var total = $all("#invoice-vehicle-table .inv-chk:checked").reduce(function(s,c){ return s+parseFloat(c.dataset.amount||0); }, 0);
+  $("#invoice-total").textContent = fmtMoney(total);
+}
+function printInvoice(){
+  var partnerId = $("#invoice-print-btn").dataset.partnerId;
+  var p = partnerById(partnerId);
+  var rows = $all("#invoice-vehicle-table tbody tr").filter(function(tr){ var c=tr.querySelector(".inv-chk"); return c && c.checked; });
+  if (!rows.length){ toast("Sélectionnez au moins un véhicule à facturer.", "err"); return; }
+  var number = $("#inv-number").value.trim() || "—", dateEm = $("#inv-date").value || todayIso(), dateEch = $("#inv-due").value || addDaysIso(dateEm, 15);
+  var total = 0;
+  var lines = rows.map(function(tr){
+    var cells = tr.querySelectorAll("td");
+    total += parseFloat(tr.querySelector(".inv-chk").dataset.amount||0);
+    return "<tr><td>"+cells[1].textContent+"</td><td>"+cells[2].textContent+"</td><td>"+cells[3].textContent+"</td><td style='text-align:right'>"+cells[4].textContent+"</td></tr>";
+  }).join("");
+  var commission = p && p.commissionPct != null ? total * p.commissionPct / 100 : null;
+  $("#print-invoice-area").innerHTML =
+    "<h2>Facture consolidée n° "+escapeHtml(number)+"</h2>" +
+    "<p><strong>"+escapeHtml(p.distributeur.toUpperCase())+"</strong><br>"+escapeHtml(p.adresse)+", "+escapeHtml(p.cp)+" "+escapeHtml(p.ville)+"<br>SIRET "+escapeHtml(p.siret)+"</p>" +
+    "<p>Date d'émission : "+dateEm+" — Date d'échéance : "+dateEch+"</p>" +
+    "<table><thead><tr><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead><tbody>"+lines+"</tbody></table>" +
+    "<p style='text-align:right;margin-top:14px'><strong>Total HT sélectionné : "+fmtMoney(total)+"</strong>" +
+    (commission!=null ? "<br>Commission ("+fmtPct(p.commissionPct)+") : "+fmtMoney(commission) : "") + "</p>";
+  window.print();
+}
+
+/* =====================================================================
+   MODALE — ANALYSE PARC CLIENT
+   ===================================================================== */
+function openAnalysisModal(partnerId){
+  var p = partnerById(partnerId);
+  $("#analysis-modal-partner-name").textContent = p ? p.distributeur : "—";
+  var list = vehiclesForPartner(partnerId);
+  var byClient = {};
+  list.forEach(function(v){
+    var key = v.client || "Client non renseigné";
+    if (!byClient[key]) byClient[key] = { count:0, ca:0, livres:0 };
+    byClient[key].count++; byClient[key].ca += Number(v.montantHT||0);
+    if (v.statutLivraison==="LIVRE") byClient[key].livres++;
+  });
+  var clients = Object.keys(byClient).sort(function(a,b){ return byClient[b].ca-byClient[a].ca; });
+  var full = state.scope === "FULL";
+  var body;
+  if (!clients.length) body = '<p class="param-text">Aucun véhicule saisi pour cette concession pour le moment.</p>';
+  else body = '<div class="table-wrap"><table class="data-table"><thead><tr><th>Client</th><th>Véhicules</th><th>Livrés</th>'+(full?'<th>CA HT</th>':'')+'</tr></thead><tbody>' +
+    clients.map(function(c){ var d=byClient[c]; return "<tr><td>"+escapeHtml(c)+"</td><td class='num'>"+d.count+"</td><td class='num'>"+d.livres+" / "+d.count+"</td>"+(full?"<td class='num'>"+fmtMoney(d.ca)+"</td>":"")+"</tr>"; }).join("") + "</tbody></table></div>";
+  $("#analysis-modal-body").innerHTML = body;
+  openModal("modal-analysis");
+}
+
+/* =====================================================================
+   COLLABORATEURS
+   ===================================================================== */
+function openCollabModal(){
+  openModal("modal-collab");
+  var list = $("#collab-list"); list.innerHTML = "<li>Chargement...</li>";
+  apiGetCollaborators().then(function(r){
+    $("#collab-manage-link").href = "https://github.com/"+r.repoOwner+"/"+r.repoName+"/settings/access";
+    if (!r.collaborators.length){ list.innerHTML = "<li>Aucun collaborateur trouvé.</li>"; return; }
+    list.innerHTML = r.collaborators.map(function(c){
+      return '<li><img class="collab-avatar" src="'+escapeAttr(c.avatarUrl)+'" alt=""><span>'+escapeHtml(c.login)+'</span><span class="pill '+(c.scope==="FULL"?"ok":"warn")+'" style="margin-left:auto">'+(c.scope||"aucun accès")+'</span></li>';
+    }).join("");
+  }).catch(function(e){ list.innerHTML = "<li>"+escapeHtml(e.message)+"</li>"; });
+}
+
+/* =====================================================================
+   MODALES GENERIQUES / THEME / SAUVEGARDE
+   ===================================================================== */
+function openModal(id){ $("#"+id).classList.remove("hidden"); }
+function closeModal(id){ $("#"+id).classList.add("hidden"); }
+
+function toggleTheme(){
+  state.theme = state.theme==="dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", state.theme);
+  $("#theme-btn").textContent = state.theme==="dark" ? "Thème clair" : "Thème sombre";
+  try { localStorage.setItem("zcd_theme", state.theme); } catch(e){}
+}
+
+async function saveAll(){
+  $("#sync-status").textContent = "Enregistrement...";
+  try {
+    await apiSaveData({ partners: state.partners, vehicles: state.vehicles });
+    markClean();
+    toast("Données enregistrées.", "ok");
+  } catch(e){
+    toast("Échec de l'enregistrement : " + e.message, "err");
+    var s = $("#sync-status"); s.textContent = "Échec de l'enregistrement"; s.style.color = "var(--err)";
+  }
+}
+async function reloadAll(){
+  if (state.dirty && !confirm("Recharger écrasera vos modifications non enregistrées. Continuer ?")) return;
+  await bootApp();
+}
+
+function renderAll(){
+  renderNavTabs();
+  $("#fleet-count-badge").textContent = state.partners.length + " concession" + (state.partners.length>1?"s":"");
+  if (state.activeTab === "all") renderAllVehiclesPanel();
+  else if (state.activeTab === "dashboard") renderDashboardPanel();
+  else if (state.activeTab === "admin") renderAdminPanel();
+  else {
+    var p = partnerById(state.activeTab) || state.partners[0];
+    if (p){ state.activeTab = p.id; renderPartnerPanel(p); }
+    else $("#main-content").innerHTML = '<p class="param-text">Aucun partenaire dans l\'annuaire.</p>';
+  }
+  $("#footer-info").textContent = "ZEEV CARS x DRIVEWAY — " + state.partners.length + " partenaires · " + state.vehicles.length + " véhicule(s) suivis";
+}
+
+/* =====================================================================
+   INITIALISATION
+   ===================================================================== */
+document.getElementById("login-btn").addEventListener("click", startGithubLogin);
+document.getElementById("logout-btn").addEventListener("click", function(){ performLogout(false); });
+document.getElementById("theme-btn").addEventListener("click", toggleTheme);
+document.getElementById("reload-btn").addEventListener("click", reloadAll);
+document.getElementById("save-btn").addEventListener("click", saveAll);
+document.getElementById("print-btn").addEventListener("click", function(){ window.print(); });
+document.getElementById("collab-btn").addEventListener("click", openCollabModal);
+document.getElementById("export-csv-btn").addEventListener("click", function(){ apiExportCsv().catch(function(e){ toast(e.message, "err"); }); });
+document.getElementById("vehicle-submit-btn").addEventListener("click", submitVehicle);
+document.getElementById("invoice-select-all").addEventListener("click", function(){ $all("#invoice-vehicle-table .inv-chk").forEach(function(c){ c.checked=true; }); updateInvoiceTotal(); });
+document.getElementById("invoice-print-btn").addEventListener("click", printInvoice);
+$all("[data-close]").forEach(function(b){ b.addEventListener("click", function(){ closeModal(b.dataset.close); }); });
+$all(".modal-overlay").forEach(function(ov){ ov.addEventListener("click", function(e){ if (e.target===ov) ov.classList.add("hidden"); }); });
+window.addEventListener("beforeunload", function(e){ if (state.dirty){ e.preventDefault(); e.returnValue = ""; } });
+
+(async function init(){
+  try { var t = localStorage.getItem("zcd_theme"); if (t){ state.theme=t; document.documentElement.setAttribute("data-theme", t); document.getElementById("theme-btn").textContent = t==="dark"?"Thème clair":"Thème sombre"; } } catch(e){}
+  if (!isApiConfigured()){
+    document.getElementById("fleet-bar").insertAdjacentHTML("beforeend", '<span class="ft offline-badge" title="CONFIG.apiBase n\'est pas encore renseigné — voir DEPLOIEMENT.md.">⚠ WORKER NON CONFIGURÉ</span>');
+  }
+  var handled = await handleGithubCallback();
+  if (!handled){
+    if (tryRestoreSession()) await bootApp();
+  }
+})();
+
+})();
+</script>
+</body>
+</html>
