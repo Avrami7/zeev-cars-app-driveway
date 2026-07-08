@@ -698,8 +698,8 @@ function renderNavTabs(){
 /* =====================================================================
    PANEL PARTENAIRE
    ===================================================================== */
-function kpiCard(label, value, sub, cls){
-  return '<div class="kpi '+(cls||"")+'"><div class="k-label">'+label+'</div><div class="k-value">'+value+'</div>'+(sub?'<div class="k-sub">'+sub+'</div>':'')+'</div>';
+function kpiCard(label, value, sub, cls, id){
+  return '<div class="kpi '+(cls||"")+'"><div class="k-label">'+label+'</div><div class="k-value"'+(id?' id="'+id+'"':'')+'>'+value+'</div>'+(sub?'<div class="k-sub"'+(id?' id="'+id+'-sub"':'')+'>'+sub+'</div>':'')+'</div>';
 }
 function statutPill(s){
   if (s === "LIVRE") return '<span class="pill ok">Livré</span>';
@@ -707,7 +707,7 @@ function statutPill(s){
   return '<span class="pill warn">Commandé</span>';
 }
 
-function renderPartnerPanel(p){
+function computePartnerKpis(p){
   var full = state.scope === "FULL";
   var list = vehiclesForPartner(p.id);
   var caHt = list.reduce(function(s,v){ return s + Number(v.montantHT||0); }, 0);
@@ -737,6 +737,42 @@ function renderPartnerPanel(p){
     var moisSpan = Math.max(1, Math.round((new Date(datesLivrees[datesLivrees.length-1]) - new Date(datesLivrees[0])) / (30*86400000)) + 1);
     if (moisSpan >= 2){ estimationAnnuelle = commission / moisSpan * 12; estimationSub = "projection sur " + moisSpan + " mois d'historique"; }
   }
+  return { full:full, list:list, caHt:caHt, commission:commission, livres:livres, nonLivres:nonLivres, facturables:facturables,
+    commissionEncaissee:commissionEncaissee, commissionEnAttente:commissionEnAttente, delaiMoyen:delaiMoyen,
+    estimationAnnuelle:estimationAnnuelle, estimationSub:estimationSub };
+}
+
+/* Mise a jour EN DIRECT (a chaque frappe) des chiffres calcules, sans
+   reconstruire le tableau -- evite toute perte de focus pendant la saisie. */
+function refreshPartnerKpisLive(){
+  var p = partnerById(state.activeTab);
+  if (!p) return;
+  var k = computePartnerKpis(p);
+  function set(id, text){ var el = document.getElementById(id); if (el) el.textContent = text; }
+  set("kpi-total-vehicules", k.list.length);
+  set("kpi-livres", k.livres.length);
+  set("kpi-non-livres", k.nonLivres);
+  if (k.full){
+    set("kpi-facturables", k.facturables.length);
+    set("kpi-valeur-vente", fmtMoney(k.caHt));
+    set("kpi-commission-totale", fmtMoney(k.commission));
+    set("kpi-commission-encaissee", fmtMoney(k.commissionEncaissee));
+    set("kpi-commission-attente", fmtMoney(k.commissionEnAttente));
+    set("kpi-delai-reglement", k.delaiMoyen != null ? (k.delaiMoyen + " j") : "—");
+    set("kpi-estimation-annuelle", k.estimationAnnuelle != null ? fmtMoney(k.estimationAnnuelle) : fmtMoney(0));
+  }
+  k.list.forEach(function(v){
+    var cell = document.getElementById("commission-cell-"+v.id);
+    if (cell) cell.textContent = v.montantHT != null ? fmtMoney(commissionFor(v)) : "—";
+  });
+}
+
+function renderPartnerPanel(p){
+  var k = computePartnerKpis(p);
+  var full = k.full, list = k.list, caHt = k.caHt, commission = k.commission, livres = k.livres,
+      nonLivres = k.nonLivres, facturables = k.facturables, commissionEncaissee = k.commissionEncaissee,
+      commissionEnAttente = k.commissionEnAttente, delaiMoyen = k.delaiMoyen,
+      estimationAnnuelle = k.estimationAnnuelle, estimationSub = k.estimationSub;
 
   var rateBlock = full
     ? '<span class="rate-display">' + fmtPct(p.commissionPct) + '</span>'
@@ -760,18 +796,18 @@ function renderPartnerPanel(p){
       '<button class="btn" data-open-analysis="'+p.id+'">Analyse client</button>' +
     '</div>' +
     '<div class="kpi-row">' +
-      kpiCard("Total véhicules", list.length, "", "accent") +
-      kpiCard("Livrés", livres.length, "", "ok") +
-      kpiCard("Non livrés", nonLivres, "", nonLivres ? "warn" : "") +
-      (full ? kpiCard("Facturables", facturables.length, "livrés non encore facturés", "accent") : "") +
-      (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "") : "") +
-      (full ? kpiCard("Commission HT totale", fmtMoney(commission), "", "warn") : "") +
+      kpiCard("Total véhicules", list.length, "", "accent", "kpi-total-vehicules") +
+      kpiCard("Livrés", livres.length, "", "ok", "kpi-livres") +
+      kpiCard("Non livrés", nonLivres, "", nonLivres ? "warn" : "", "kpi-non-livres") +
+      (full ? kpiCard("Facturables", facturables.length, "livrés non encore facturés", "accent", "kpi-facturables") : "") +
+      (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "", "kpi-valeur-vente") : "") +
+      (full ? kpiCard("Commission HT totale", fmtMoney(commission), "", "warn", "kpi-commission-totale") : "") +
     '</div>' +
     (full ? '<div class="kpi-row">' +
-      kpiCard("Commission encaissée", fmtMoney(commissionEncaissee), "", "ok") +
-      kpiCard("Commission en attente", fmtMoney(commissionEnAttente), "", "warn") +
-      kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "") +
-      kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "") +
+      kpiCard("Commission encaissée", fmtMoney(commissionEncaissee), "", "ok", "kpi-commission-encaissee") +
+      kpiCard("Commission en attente", fmtMoney(commissionEnAttente), "", "warn", "kpi-commission-attente") +
+      kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "", "kpi-delai-reglement") +
+      kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "", "kpi-estimation-annuelle") +
     '</div>' : '') +
     '<div class="table-wrap"><table class="data-table" id="table-partner-'+p.id+'"></table></div>' +
   '</section>';
@@ -815,7 +851,7 @@ function renderVehicleTable(sel, list, editable){
           '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonPrevue" value="'+escapeAttr(isoToFr(v.dateLivraisonPrevue))+'" placeholder="JJ/MM/AAAA" class="v-edit"></td>' +
           '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonEffective" value="'+escapeAttr(isoToFr(v.dateLivraisonEffective))+'" placeholder="JJ/MM/AAAA" class="v-edit"></td>' +
           (full ? '<td class="num"><input type="number" step="0.01" min="0" data-id="'+v.id+'" data-field="montantHT" value="'+(v.montantHT!=null?v.montantHT:"")+'" class="v-edit" style="text-align:right"></td>' +
-                  '<td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
+                  '<td class="num" id="commission-cell-'+v.id+'">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
                   '<td><select data-id="'+v.id+'" data-field="statutPaiement" class="v-edit">' +
                     Object.keys(STATUT_PAIEMENT_LABELS).map(function(k){ return '<option value="'+k+'"'+(v.statutPaiement===k?" selected":"")+'>'+STATUT_PAIEMENT_LABELS[k]+'</option>'; }).join("") +
                   '</select></td>' +
@@ -857,6 +893,7 @@ function handleVehicleEditLight(input){
   if (field === "dateLivraisonPrevue" || field === "dateLivraisonEffective") val = frToIso(val);
   v[field] = val;
   markDirty();
+  refreshPartnerKpisLive();
 }
 function handleVehicleEditCommit(input){
   handleVehicleEditLight(input);
