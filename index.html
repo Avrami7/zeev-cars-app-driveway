@@ -331,8 +331,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
         </select>
       </div>
       <div class="form-grid">
-        <div class="form-row"><label for="v-date-prevue">Date livraison prévue</label><input type="text" id="v-date-prevue" placeholder="AAAA-MM-JJ"></div>
-        <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="text" id="v-date-effective" placeholder="AAAA-MM-JJ"></div>
+        <div class="form-row"><label for="v-date-prevue">Date livraison prévue</label><input type="text" id="v-date-prevue" placeholder="JJ/MM/AAAA"></div>
+        <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="text" id="v-date-effective" placeholder="JJ/MM/AAAA"></div>
       </div>
       <div class="form-row"><label for="v-statut-source">Statut véhicule (source)</label><input type="text" id="v-statut-source" placeholder="ex : Vehicle On Order, Préparation - Résa..."></div>
       <div class="form-row"><label for="v-remarques">Remarques</label><textarea id="v-remarques"></textarea></div>
@@ -349,9 +349,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
       <div class="modal-note">Sélectionnez les véhicules livrés à regrouper sur une seule facture. Document de travail destiné à votre outil de facturation — pas une facture légale émise automatiquement.</div>
       <div class="form-grid">
         <div class="form-row"><label for="inv-number">N° de facture</label><input type="text" id="inv-number"></div>
-        <div class="form-row"><label for="inv-date">Date d'émission</label><input type="text" id="inv-date" placeholder="AAAA-MM-JJ"></div>
+        <div class="form-row"><label for="inv-date">Date d'émission</label><input type="text" id="inv-date" placeholder="JJ/MM/AAAA"></div>
       </div>
-      <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="text" id="inv-due" placeholder="AAAA-MM-JJ"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
+      <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="text" id="inv-due" placeholder="JJ/MM/AAAA"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
       <div class="table-wrap"><table class="data-table" id="invoice-vehicle-table"></table></div>
       <div class="invoice-total-bar"><span>Total sélectionné : <strong id="invoice-total">0,00 €</strong></span><button class="btn small" id="invoice-select-all">Tout sélectionner</button></div>
     </div>
@@ -407,6 +407,20 @@ function escapeAttr(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replac
 function escapeHtml(s){ return escapeAttr(s); }
 function todayIso(){ return new Date().toISOString().slice(0,10); }
 function addDaysIso(iso, days){ var d = iso ? new Date(iso) : new Date(); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); }
+function isoToFr(iso){
+  if (!iso) return "";
+  var m = String(iso).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return iso;
+  return m[3] + "/" + m[2] + "/" + m[1];
+}
+function frToIso(fr){
+  if (!fr) return "";
+  var s = String(fr).trim();
+  var m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (!m) return s;
+  var d = m[1].padStart(2,"0"), mo = m[2].padStart(2,"0"), y = m[3];
+  return y + "-" + mo + "-" + d;
+}
 
 function toast(msg, kind){
   var el = $("#toast");
@@ -798,8 +812,8 @@ function renderVehicleTable(sel, list, editable){
           '<td><select data-id="'+v.id+'" data-field="statutLivraison" class="v-edit">' +
             Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'"'+(v.statutLivraison===k?" selected":"")+'>'+STATUT_LABELS[k]+'</option>'; }).join("") +
           '</select></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonPrevue" value="'+(v.dateLivraisonPrevue||"")+'" placeholder="AAAA-MM-JJ" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonEffective" value="'+(v.dateLivraisonEffective||"")+'" placeholder="AAAA-MM-JJ" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonPrevue" value="'+escapeAttr(isoToFr(v.dateLivraisonPrevue))+'" placeholder="JJ/MM/AAAA" class="v-edit"></td>' +
+          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonEffective" value="'+escapeAttr(isoToFr(v.dateLivraisonEffective))+'" placeholder="JJ/MM/AAAA" class="v-edit"></td>' +
           (full ? '<td class="num"><input type="number" step="0.01" min="0" data-id="'+v.id+'" data-field="montantHT" value="'+(v.montantHT!=null?v.montantHT:"")+'" class="v-edit" style="text-align:right"></td>' +
                   '<td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
                   '<td><select data-id="'+v.id+'" data-field="statutPaiement" class="v-edit">' +
@@ -814,7 +828,7 @@ function renderVehicleTable(sel, list, editable){
           '<td>'+escapeHtml(v.societeLeasing)+'</td><td>'+escapeHtml(v.modele)+'</td>' +
           '<td>'+escapeHtml(v.immatriculation)+'</td><td>'+escapeHtml(v.vin)+'</td><td>'+escapeHtml(v.numeroContrat)+'</td>' +
           '<td>'+escapeHtml(v.statutVehiculeSource)+'</td><td>'+statutPill(v.statutLivraison)+'</td>' +
-          '<td>'+(v.dateLivraisonPrevue||"—")+'</td><td>'+(v.dateLivraisonEffective||"—")+'</td>' +
+          '<td>'+(isoToFr(v.dateLivraisonPrevue)||"—")+'</td><td>'+(isoToFr(v.dateLivraisonEffective)||"—")+'</td>' +
           (full ? '<td class="num">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td><td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
                   '<td>'+(STATUT_PAIEMENT_LABELS[v.statutPaiement]||"—")+'</td><td><span class="pill '+elig.cls+'">'+elig.label+'</span></td>' : '') +
           '<td class="actions"><button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td></tr>';
@@ -840,6 +854,7 @@ function handleVehicleEditLight(input){
   if (!v) return;
   var field = input.dataset.field, val = input.value;
   if (field === "montantHT") val = parseFloat(val) || 0;
+  if (field === "dateLivraisonPrevue" || field === "dateLivraisonEffective") val = frToIso(val);
   v[field] = val;
   markDirty();
 }
@@ -1053,7 +1068,7 @@ function submitVehicle(){
     client: client, conducteur: $("#v-conducteur").value.trim(),
     modele: $("#v-modele").value.trim(), immatriculation: $("#v-immat").value.trim().toUpperCase(), vin: $("#v-vin").value.trim().toUpperCase(),
     statutLivraison: $("#v-statut").value,
-    dateLivraisonPrevue: $("#v-date-prevue").value, dateLivraisonEffective: $("#v-date-effective").value,
+    dateLivraisonPrevue: frToIso($("#v-date-prevue").value), dateLivraisonEffective: frToIso($("#v-date-effective").value),
     statutVehiculeSource: $("#v-statut-source").value.trim(), remarques: $("#v-remarques").value.trim(),
     montantHT: null, statutFacturation: "NON_FACTURE", statutPaiement: "A_VERIFIER", numeroFacture: "", dateFacture: ""
   });
@@ -1067,7 +1082,7 @@ function openInvoiceModal(partnerId){
   var p = partnerById(partnerId);
   $("#invoice-modal-partner-name").textContent = p ? p.distributeur : "—";
   $("#invoice-print-btn").dataset.partnerId = partnerId;
-  $("#inv-number").value = ""; $("#inv-date").value = todayIso(); $("#inv-due").value = addDaysIso(todayIso(), 15);
+  $("#inv-number").value = ""; $("#inv-date").value = isoToFr(todayIso()); $("#inv-due").value = isoToFr(addDaysIso(todayIso(), 15));
   var list = vehiclesForPartner(partnerId).filter(function(v){ return v.statutLivraison === "LIVRE"; });
   var head = "<thead><tr><th class='chk'></th><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead>";
   var body = list.length ? list.map(function(v){
@@ -1087,7 +1102,7 @@ function printInvoice(){
   var p = partnerById(partnerId);
   var rows = $all("#invoice-vehicle-table tbody tr").filter(function(tr){ var c=tr.querySelector(".inv-chk"); return c && c.checked; });
   if (!rows.length){ toast("Sélectionnez au moins un véhicule à facturer.", "err"); return; }
-  var number = $("#inv-number").value.trim() || "—", dateEm = $("#inv-date").value || todayIso(), dateEch = $("#inv-due").value || addDaysIso(dateEm, 15);
+  var number = $("#inv-number").value.trim() || "—", dateEm = $("#inv-date").value || isoToFr(todayIso()), dateEch = $("#inv-due").value || isoToFr(addDaysIso(frToIso(dateEm) || todayIso(), 15));
   var total = 0;
   var lines = rows.map(function(tr){
     var cells = tr.querySelectorAll("td");
