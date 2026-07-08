@@ -536,12 +536,12 @@ function importCsvFile(file){
       target.numeroContrat = row.numeroContrat;
       target.statutVehiculeSource = row.statutVehiculeSource;
       target.statutLivraison = ["COMMANDE","LIVRE","NON_LIVRE"].indexOf(row.statutLivraison) !== -1 ? row.statutLivraison : (existing ? existing.statutLivraison : "COMMANDE");
-      target.dateLivraisonPrevue = row.dateLivraisonPrevue;
-      target.dateLivraisonEffective = row.dateLivraisonEffective;
+      target.dateLivraisonPrevue = frToIso(row.dateLivraisonPrevue);
+      target.dateLivraisonEffective = frToIso(row.dateLivraisonEffective);
       target.montantHT = parseNum(row.montantHT);
       target.statutFacturation = ["NON_FACTURE","FACTURE"].indexOf(row.statutFacturation) !== -1 ? row.statutFacturation : (existing ? existing.statutFacturation : "NON_FACTURE");
       target.numeroFacture = row.numeroFacture;
-      target.dateFacture = row.dateFacture;
+      target.dateFacture = frToIso(row.dateFacture);
       target.statutPaiement = ["A_VERIFIER","IMPAYE","PAYE"].indexOf(row.statutPaiement) !== -1 ? row.statutPaiement : (existing ? existing.statutPaiement : "A_VERIFIER");
       target.remarques = row.remarques;
 
