@@ -98,9 +98,28 @@ input,select,textarea{font-family:inherit}
 .nav::-webkit-scrollbar-track{background:var(--bg2)}
 .nav::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
 .nav{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:auto}
-.ntab{padding:13px 16px;background:transparent;border:none;color:var(--tx2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.ntab{padding:13px 16px;background:transparent;border:none;color:var(--tx2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis}
 .ntab:hover{color:var(--tx1)}
 .ntab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.nav-search-wrap{display:flex;align-items:center;gap:8px;padding:8px 22px;background:var(--bg2);border-bottom:1px solid var(--line)}
+.nav-search-wrap input{flex:1;max-width:320px;padding:7px 11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:12px}
+.nav-search-wrap .param-text{font-size:11px}
+
+.form-section-title{font-family:var(--disp);font-weight:700;font-size:12.5px;color:var(--tx2);margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.form-section-title:first-child{margin-top:0}
+
+.kpi.locked{opacity:.55}
+.kpi.locked .k-value{font-size:18px}
+.kpi .k-lock-hint{font-size:10px;color:var(--tx3);margin-top:4px}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 18px;font-size:12.5px;color:var(--tx1);box-shadow:var(--shadow);z-index:300;display:flex;align-items:center;gap:12px}
+.toast-undo-btn{background:none;border:none;color:var(--accent);font-weight:700;text-decoration:underline;cursor:pointer;font-size:12.5px;padding:0;white-space:nowrap}
+
+.print-report-header{display:none}
+
+.veh-search-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+.veh-search-toolbar input{flex:1;min-width:200px;max-width:320px;padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:12.5px}
+.lock-cell{color:var(--tx3);cursor:help}
 
 main{padding:22px}
 .tab-panel{display:none}
@@ -194,7 +213,6 @@ main{padding:22px}
 .bar-row .bar-val{text-align:right;font-variant-numeric:tabular-nums}
 
 .appfooter{padding:12px 22px;border-top:1px solid var(--line);background:var(--bg2);color:var(--tx3);font-size:11px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 18px;font-size:12.5px;color:var(--tx1);box-shadow:var(--shadow);z-index:300}
 .toast.err{border-color:var(--err);color:var(--err)}
 .toast.ok{border-color:var(--ok);color:var(--ok)}
 
@@ -218,6 +236,8 @@ main{padding:22px}
   body:not(.print-invoice-mode) #auth-overlay,
   body:not(.print-invoice-mode) .topbar,
   body:not(.print-invoice-mode) .nav,
+  body:not(.print-invoice-mode) .nav-search-wrap,
+  body:not(.print-invoice-mode) .veh-search-toolbar,
   body:not(.print-invoice-mode) .appfooter,
   body:not(.print-invoice-mode) .toast,
   body:not(.print-invoice-mode) .modal-overlay,
@@ -228,6 +248,9 @@ main{padding:22px}
   body:not(.print-invoice-mode) .data-table{ min-width:0; }
   body:not(.print-invoice-mode) .btn,
   body:not(.print-invoice-mode) .tb-btn{ display:none !important; }
+  body:not(.print-invoice-mode) .print-report-header{ display:block !important; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid #000; }
+  body:not(.print-invoice-mode) .print-report-header h2{ font-size:18px; margin:0 0 4px; }
+  body:not(.print-invoice-mode) .print-report-header .print-report-date{ font-size:11px; color:#444; }
 }
 @media (max-width:760px){
   main{padding:14px} .data-table{min-width:640px} .form-grid{grid-template-columns:1fr}
@@ -300,6 +323,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
     </div>
   </header>
 
+  <div class="nav-search-wrap">
+    <span class="param-text">🔍</span>
+    <input type="text" id="nav-search" placeholder="Filtrer les onglets (nom de concession, marque...)">
+    <span class="param-text" id="nav-search-count"></span>
+  </div>
   <nav class="nav" id="nav-tabs"></nav>
   <main id="main-content"></main>
   <footer class="appfooter"><span id="footer-info">—</span></footer>
@@ -311,10 +339,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
     <div class="modal-head"><h3>Ajouter un véhicule</h3><button class="modal-close" data-close="modal-vehicle">✕</button></div>
     <div class="modal-body">
       <div class="modal-note">La concession est déjà déterminée par l'onglet depuis lequel vous ouvrez ce formulaire (<strong id="vehicle-modal-partner-name">—</strong>). Le véhicule est ajouté à la liste de travail ; cliquez ensuite sur « Enregistrer sur GitHub » pour le conserver.</div>
-      <div class="form-grid">
-        <div class="form-row"><label for="v-leasing">Société de leasing</label><input type="text" id="v-leasing" placeholder="ex : Alphabet, Athlon, direct..."></div>
-        <div class="form-row"><label for="v-numcontrat">N° contrat / commande</label><input type="text" id="v-numcontrat"></div>
-      </div>
+
+      <div class="form-section-title">① Client &amp; véhicule</div>
       <div class="form-row"><label for="v-client">Client (entité Siemens) *</label><input type="text" id="v-client"></div>
       <div class="form-row"><label for="v-conducteur">Conducteur</label><input type="text" id="v-conducteur"></div>
       <div class="form-row"><label for="v-modele">Modèle / Version</label><input type="text" id="v-modele"></div>
@@ -322,6 +348,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
         <div class="form-row"><label for="v-immat">Immatriculation</label><input type="text" id="v-immat"></div>
         <div class="form-row"><label for="v-vin">VIN / N° de série</label><input type="text" id="v-vin"></div>
       </div>
+
+      <div class="form-section-title">② Livraison</div>
       <div class="form-row">
         <label for="v-statut">Statut livraison</label>
         <select id="v-statut">
@@ -335,9 +363,79 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
         <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="text" id="v-date-effective" placeholder="JJ/MM/AAAA"></div>
       </div>
       <div class="form-row"><label for="v-statut-source">Statut véhicule (source)</label><input type="text" id="v-statut-source" placeholder="ex : Vehicle On Order, Préparation - Résa..."></div>
+
+      <div class="form-section-title">③ Contrat</div>
+      <div class="form-grid">
+        <div class="form-row"><label for="v-leasing">Société de leasing</label><input type="text" id="v-leasing" placeholder="ex : Alphabet, Athlon, direct..."></div>
+        <div class="form-row"><label for="v-numcontrat">N° contrat / commande</label><input type="text" id="v-numcontrat"></div>
+      </div>
       <div class="form-row"><label for="v-remarques">Remarques</label><textarea id="v-remarques"></textarea></div>
     </div>
     <div class="modal-foot"><button class="btn ghost" data-close="modal-vehicle">Annuler</button><button class="btn primary" id="vehicle-submit-btn">Ajouter à la liste</button></div>
+  </div>
+</div>
+
+<!-- MODALE — DETAILS / MODIFICATION D'UN VEHICULE EXISTANT -->
+<div id="modal-vehicle-details" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-head"><h3>Détails du véhicule</h3><button class="modal-close" data-close="modal-vehicle-details">✕</button></div>
+    <div class="modal-body">
+      <div class="form-section-title">① Client &amp; véhicule</div>
+      <div class="form-row"><label for="vd-client">Client (entité Siemens) *</label><input type="text" id="vd-client"></div>
+      <div class="form-row"><label for="vd-conducteur">Conducteur</label><input type="text" id="vd-conducteur"></div>
+      <div class="form-row"><label for="vd-modele">Modèle / Version</label><input type="text" id="vd-modele"></div>
+      <div class="form-grid">
+        <div class="form-row"><label for="vd-immat">Immatriculation</label><input type="text" id="vd-immat"></div>
+        <div class="form-row"><label for="vd-vin">VIN / N° de série</label><input type="text" id="vd-vin"></div>
+      </div>
+
+      <div class="form-section-title">② Livraison</div>
+      <div class="form-row">
+        <label for="vd-statut">Statut livraison</label>
+        <select id="vd-statut">
+          <option value="COMMANDE">Commandé — en attente de livraison</option>
+          <option value="LIVRE">Livré</option>
+          <option value="NON_LIVRE">Non livré</option>
+        </select>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label for="vd-date-prevue">Date livraison prévue</label><input type="text" id="vd-date-prevue" placeholder="JJ/MM/AAAA"></div>
+        <div class="form-row"><label for="vd-date-effective">Date livraison effective</label><input type="text" id="vd-date-effective" placeholder="JJ/MM/AAAA"></div>
+      </div>
+      <div class="form-row"><label for="vd-statut-source">Statut véhicule (source)</label><input type="text" id="vd-statut-source"></div>
+
+      <div class="form-section-title">③ Contrat</div>
+      <div class="form-grid">
+        <div class="form-row"><label for="vd-leasing">Société de leasing</label><input type="text" id="vd-leasing"></div>
+        <div class="form-row"><label for="vd-numcontrat">N° contrat / commande</label><input type="text" id="vd-numcontrat"></div>
+      </div>
+
+      <div class="form-section-title" id="vd-financier-title">④ Financier <span style="font-weight:400;color:var(--tx3);">(accès complet uniquement)</span></div>
+      <div id="vd-financier-fields">
+        <div class="form-grid">
+          <div class="form-row"><label for="vd-montant">Montant HT</label><input type="number" step="0.01" min="0" id="vd-montant"></div>
+          <div class="form-row"><label for="vd-statut-paiement">Statut paiement</label>
+            <select id="vd-statut-paiement">
+              <option value="A_VERIFIER">À vérifier</option>
+              <option value="IMPAYE">Impayé</option>
+              <option value="PAYE">Payé</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-row"><label for="vd-numfacture">N° facture</label><input type="text" id="vd-numfacture"></div>
+          <div class="form-row"><label for="vd-datefacture">Date facture</label><input type="text" id="vd-datefacture" placeholder="JJ/MM/AAAA"></div>
+        </div>
+      </div>
+
+      <div class="form-section-title">Remarques</div>
+      <div class="form-row"><textarea id="vd-remarques"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn danger-o" id="vd-delete-btn" style="margin-right:auto;">🗑 Supprimer ce véhicule</button>
+      <button class="btn ghost" data-close="modal-vehicle-details">Annuler</button>
+      <button class="btn primary" id="vd-save-btn">Enregistrer les modifications</button>
+    </div>
   </div>
 </div>
 
@@ -429,8 +527,14 @@ function toast(msg, kind){
   clearTimeout(toast._t);
   toast._t = setTimeout(function(){ el.classList.add("hidden"); }, 3400);
 }
-function markDirty(){ state.dirty = true; var s=$("#sync-status"); s.textContent="Modifications non enregistrées"; s.style.color="var(--warn)"; }
-function markClean(){ state.dirty = false; var s=$("#sync-status"); s.textContent="Synchronisé"; s.style.color="var(--ok)"; }
+function markDirty(){
+  state.dirty = true;
+  state.pendingCount = (state.pendingCount||0) + 1;
+  var s=$("#sync-status");
+  s.textContent = "● " + state.pendingCount + " modification" + (state.pendingCount>1?"s":"") + " non enregistrée" + (state.pendingCount>1?"s":"");
+  s.style.color="var(--warn)";
+}
+function markClean(){ state.dirty = false; state.pendingCount = 0; var s=$("#sync-status"); s.textContent="Synchronisé"; s.style.color="var(--ok)"; }
 
 /* =====================================================================
    APPELS AU WORKER — seul point de contact reseau
@@ -684,7 +788,7 @@ function shortName(p){ return p.distributeur.split(" — ")[0]; }
    ===================================================================== */
 function renderNavTabs(){
   var html = state.partners.map(function(p){
-    return '<button class="ntab'+(state.activeTab===p.id?" active":"")+'" data-tab="'+p.id+'">Facturation '+escapeHtml(shortName(p))+'</button>';
+    return '<button class="ntab'+(state.activeTab===p.id?" active":"")+'" data-tab="'+p.id+'" title="'+escapeAttr(p.distributeur)+' ('+escapeAttr((p.marques||[]).join("/"))+')">Facturation '+escapeHtml(shortName(p))+'</button>';
   }).join("");
   html += '<button class="ntab'+(state.activeTab==="all"?" active":"")+'" data-tab="all">Tous les véhicules commandés</button>';
   html += '<button class="ntab'+(state.activeTab==="dashboard"?" active":"")+'" data-tab="dashboard">Tableau de bord</button>';
@@ -693,6 +797,8 @@ function renderNavTabs(){
   }
   $("#nav-tabs").innerHTML = html;
   $all("#nav-tabs .ntab").forEach(function(b){ b.addEventListener("click", function(){ state.activeTab = b.dataset.tab; renderAll(); }); });
+  var searchEl = $("#nav-search");
+  if (searchEl && searchEl.value) searchEl.dispatchEvent(new Event("input"));
 }
 
 /* =====================================================================
@@ -767,7 +873,11 @@ function refreshPartnerKpisLive(){
   });
 }
 
-function renderPartnerPanel(p){
+function lockedKpiCard(label){
+  return '<div class="kpi locked"><div class="k-label">'+label+'</div><div class="k-value">🔒</div><div class="k-lock-hint">Accès complet requis</div></div>';
+}
+
+function renderPartnerPanel(p, searchQuery){
   var k = computePartnerKpis(p);
   var full = k.full, list = k.list, caHt = k.caHt, commission = k.commission, livres = k.livres,
       nonLivres = k.nonLivres, facturables = k.facturables, commissionEncaissee = k.commissionEncaissee,
@@ -776,9 +886,10 @@ function renderPartnerPanel(p){
 
   var rateBlock = full
     ? '<span class="rate-display">' + fmtPct(p.commissionPct) + '</span>'
-    : '<span class="param-text">Masqué — accès restreint (Livraison uniquement)</span>';
+    : '<span class="param-text">🔒 Masqué — accès restreint (Livraison uniquement)</span>';
 
   var html = '<section class="tab-panel active">' +
+    '<div class="print-report-header"><h2>' + escapeHtml(p.distributeur) + '</h2><div class="print-report-date">Édité le ' + isoToFr(todayIso()) + '</div></div>' +
     '<div class="bandeau bandeau-ok">Entité à facturer : <strong>' + escapeHtml(p.distributeur.toUpperCase()) + '</strong>' +
       (p.siren ? ' — SIREN ' + escapeHtml(p.siren) : '') + ' — SIRET ' + escapeHtml(p.siret) + '<br>' +
       escapeHtml(p.adresse) + ', ' + escapeHtml(p.cp) + ' ' + escapeHtml(p.ville) +
@@ -799,22 +910,25 @@ function renderPartnerPanel(p){
       kpiCard("Total véhicules", list.length, "", "accent", "kpi-total-vehicules") +
       kpiCard("Livrés", livres.length, "", "ok", "kpi-livres") +
       kpiCard("Non livrés", nonLivres, "", nonLivres ? "warn" : "", "kpi-non-livres") +
-      (full ? kpiCard("Facturables", facturables.length, "livrés non encore facturés", "accent", "kpi-facturables") : "") +
-      (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "", "kpi-valeur-vente") : "") +
-      (full ? kpiCard("Commission HT totale", fmtMoney(commission), "", "warn", "kpi-commission-totale") : "") +
+      (full ? kpiCard("Facturables", facturables.length, "livrés non encore facturés", "accent", "kpi-facturables") : lockedKpiCard("Facturables")) +
+      (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "", "kpi-valeur-vente") : lockedKpiCard("Valeur de vente totale (HT)")) +
+      (full ? kpiCard("Commission HT totale", fmtMoney(commission), "", "warn", "kpi-commission-totale") : lockedKpiCard("Commission HT totale")) +
     '</div>' +
-    (full ? '<div class="kpi-row">' +
-      kpiCard("Commission encaissée", fmtMoney(commissionEncaissee), "", "ok", "kpi-commission-encaissee") +
-      kpiCard("Commission en attente", fmtMoney(commissionEnAttente), "", "warn", "kpi-commission-attente") +
-      kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "", "kpi-delai-reglement") +
-      kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "", "kpi-estimation-annuelle") +
-    '</div>' : '') +
+    '<div class="kpi-row">' +
+      (full ? kpiCard("Commission encaissée", fmtMoney(commissionEncaissee), "", "ok", "kpi-commission-encaissee") : lockedKpiCard("Commission encaissée")) +
+      (full ? kpiCard("Commission en attente", fmtMoney(commissionEnAttente), "", "warn", "kpi-commission-attente") : lockedKpiCard("Commission en attente")) +
+      (full ? kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "", "kpi-delai-reglement") : lockedKpiCard("Délai moyen de règlement")) +
+      (full ? kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "", "kpi-estimation-annuelle") : lockedKpiCard("Estimation annuelle")) +
+    '</div>' +
+    '<div class="veh-search-toolbar"><input type="text" id="veh-search-'+p.id+'" placeholder="Rechercher un véhicule (client, modèle, immatriculation...)" value="'+escapeAttr(searchQuery||"")+'"></div>' +
     '<div class="table-wrap"><table class="data-table" id="table-partner-'+p.id+'"></table></div>' +
   '</section>';
 
   $("#main-content").innerHTML = html;
-  renderVehicleTable("#table-partner-"+p.id, list, true);
+  renderVehicleTable("#table-partner-"+p.id, list, searchQuery);
   bindPanelActions();
+  var searchInput = $("#veh-search-"+p.id);
+  searchInput.addEventListener("input", function(){ renderVehicleTable("#table-partner-"+p.id, vehiclesForPartner(p.id), searchInput.value); });
 }
 
 const STATUT_PAIEMENT_LABELS = { A_VERIFIER:"À vérifier", IMPAYE:"Impayé", PAYE:"Payé" };
@@ -825,84 +939,89 @@ function eligibiliteFacturation(v){
   return { label:"Éligible facturation", cls:"ok" };
 }
 
-function renderVehicleTable(sel, list, editable){
+/* Tableau simplifie : 5 colonnes essentielles + acces "Details" pour le reste.
+   Recherche cote client sur client/modele/immatriculation. */
+function renderVehicleTable(sel, list, query, showConcession){
   var full = state.scope === "FULL";
-  var head = "<thead><tr><th>Client</th><th>Conducteur</th><th>Société leasing</th><th>Modèle / Version</th><th>Immatriculation</th><th>VIN</th><th>N° contrat</th><th>Statut véhicule (source)</th><th>Statut livraison</th><th>Date prévue</th><th>Date effective</th>" +
-    (full ? "<th>Montant HT</th><th>Commission</th><th>Statut paiement</th><th>Éligibilité facturation</th>" : "") + "<th></th></tr></thead>";
+  query = (query||"").trim().toLowerCase();
+  var filtered = !query ? list : list.filter(function(v){
+    var p2 = partnerById(v.partnerId);
+    return (v.client||"").toLowerCase().indexOf(query)!==-1 ||
+           (v.modele||"").toLowerCase().indexOf(query)!==-1 ||
+           (v.immatriculation||"").toLowerCase().indexOf(query)!==-1 ||
+           (showConcession && p2 && p2.distributeur.toLowerCase().indexOf(query)!==-1);
+  });
+  var head = "<thead><tr>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
+    (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
+    "<th></th></tr></thead>";
   var body = "";
-  if (!list.length){
-    body = '<tr class="empty-row"><td colspan="16">Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».</td></tr>';
+  if (!filtered.length){
+    var colspan = showConcession ? 7 : 6;
+    body = '<tr class="empty-row"><td colspan="'+colspan+'">' + (query ? "Aucun véhicule ne correspond à « " + escapeHtml(query) + " »." : 'Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».') + '</td></tr>';
   } else {
-    list.forEach(function(v){
-      var elig = eligibiliteFacturation(v);
-      if (editable){
-        body += '<tr data-id="'+v.id+'">' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="client" value="'+escapeAttr(v.client)+'" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="conducteur" value="'+escapeAttr(v.conducteur)+'" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="societeLeasing" value="'+escapeAttr(v.societeLeasing)+'" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="modele" value="'+escapeAttr(v.modele)+'" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="immatriculation" value="'+escapeAttr(v.immatriculation)+'" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="vin" value="'+escapeAttr(v.vin)+'" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="numeroContrat" value="'+escapeAttr(v.numeroContrat)+'" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="statutVehiculeSource" value="'+escapeAttr(v.statutVehiculeSource)+'" class="v-edit"></td>' +
-          '<td><select data-id="'+v.id+'" data-field="statutLivraison" class="v-edit">' +
-            Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'"'+(v.statutLivraison===k?" selected":"")+'>'+STATUT_LABELS[k]+'</option>'; }).join("") +
-          '</select></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonPrevue" value="'+escapeAttr(isoToFr(v.dateLivraisonPrevue))+'" placeholder="JJ/MM/AAAA" class="v-edit"></td>' +
-          '<td><input type="text" data-id="'+v.id+'" data-field="dateLivraisonEffective" value="'+escapeAttr(isoToFr(v.dateLivraisonEffective))+'" placeholder="JJ/MM/AAAA" class="v-edit"></td>' +
-          (full ? '<td class="num"><input type="number" step="0.01" min="0" data-id="'+v.id+'" data-field="montantHT" value="'+(v.montantHT!=null?v.montantHT:"")+'" class="v-edit" style="text-align:right"></td>' +
-                  '<td class="num" id="commission-cell-'+v.id+'">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
-                  '<td><select data-id="'+v.id+'" data-field="statutPaiement" class="v-edit">' +
-                    Object.keys(STATUT_PAIEMENT_LABELS).map(function(k){ return '<option value="'+k+'"'+(v.statutPaiement===k?" selected":"")+'>'+STATUT_PAIEMENT_LABELS[k]+'</option>'; }).join("") +
-                  '</select></td>' +
-                  '<td><span class="pill '+elig.cls+'">'+elig.label+'</span></td>' : '') +
-          '<td class="actions"><button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td>' +
-        '</tr>';
-      } else {
-        var p = partnerById(v.partnerId);
-        body += '<tr><td>'+escapeHtml(p?p.distributeur:"—")+'</td><td>'+escapeHtml(v.client)+'</td><td>'+escapeHtml(v.conducteur)+'</td>' +
-          '<td>'+escapeHtml(v.societeLeasing)+'</td><td>'+escapeHtml(v.modele)+'</td>' +
-          '<td>'+escapeHtml(v.immatriculation)+'</td><td>'+escapeHtml(v.vin)+'</td><td>'+escapeHtml(v.numeroContrat)+'</td>' +
-          '<td>'+escapeHtml(v.statutVehiculeSource)+'</td><td>'+statutPill(v.statutLivraison)+'</td>' +
-          '<td>'+(isoToFr(v.dateLivraisonPrevue)||"—")+'</td><td>'+(isoToFr(v.dateLivraisonEffective)||"—")+'</td>' +
-          (full ? '<td class="num">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td><td class="num">'+(v.montantHT!=null?fmtMoney(commissionFor(v)):"—")+'</td>' +
-                  '<td>'+(STATUT_PAIEMENT_LABELS[v.statutPaiement]||"—")+'</td><td><span class="pill '+elig.cls+'">'+elig.label+'</span></td>' : '') +
-          '<td class="actions"><button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td></tr>';
-      }
+    filtered.forEach(function(v){
+      var p = partnerById(v.partnerId);
+      body += '<tr data-id="'+v.id+'">' +
+        (showConcession ? '<td>'+escapeHtml(p?p.distributeur:"—")+'</td>' : '') +
+        '<td>'+escapeHtml(v.client)+'</td>' +
+        '<td>'+escapeHtml(v.modele)+'</td>' +
+        '<td>'+escapeHtml(v.immatriculation)+'</td>' +
+        '<td>'+statutPill(v.statutLivraison)+'</td>' +
+        (full ? '<td class="num">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td>' : '<td class="num lock-cell" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
+        '<td class="actions"><button class="btn small" data-details-vehicle="'+v.id+'">Détails</button> <button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td>' +
+      '</tr>';
     });
   }
   var table = $(sel);
   table.innerHTML = head + "<tbody>" + body + "</tbody>";
-  if (editable){
-    $all(sel+" .v-edit").forEach(function(i){ i.addEventListener("input", function(){ handleVehicleEditLight(i); }); i.addEventListener("change", function(){ handleVehicleEditCommit(i); }); });
-  }
+  $all(sel+" [data-details-vehicle]").forEach(function(btn){
+    btn.addEventListener("click", function(){ openVehicleDetailsModal(btn.dataset.detailsVehicle); });
+  });
   $all(sel+" [data-del-vehicle]").forEach(function(btn){
-    btn.addEventListener("click", function(){
-      if (!confirm("Supprimer ce véhicule ?")) return;
-      state.vehicles = state.vehicles.filter(function(v){ return v.id !== btn.dataset.delVehicle; });
-      markDirty(); renderAll();
-    });
+    btn.addEventListener("click", function(){ deleteVehicleWithUndo(btn.dataset.delVehicle); });
   });
 }
-function handleVehicleEditLight(input){
-  var v = null;
-  for (var i=0;i<state.vehicles.length;i++) if (state.vehicles[i].id===input.dataset.id){ v=state.vehicles[i]; break; }
-  if (!v) return;
-  var field = input.dataset.field, val = input.value;
-  if (field === "montantHT") val = parseFloat(val) || 0;
-  if (field === "dateLivraisonPrevue" || field === "dateLivraisonEffective") val = frToIso(val);
-  v[field] = val;
+
+/* Suppression avec delai de grace : retrait immediat de l'affichage,
+   mais annulable pendant 5 secondes via le toast, avant tout enregistrement. */
+function deleteVehicleWithUndo(vehicleId){
+  var idx = state.vehicles.findIndex(function(v){ return v.id === vehicleId; });
+  if (idx === -1) return;
+  var removed = state.vehicles[idx];
+  var removedIndex = idx;
+  state.vehicles.splice(idx, 1);
   markDirty();
-  refreshPartnerKpisLive();
-}
-function handleVehicleEditCommit(input){
-  handleVehicleEditLight(input);
   renderAll();
+  toastWithUndo("Véhicule supprimé.", function(){
+    state.vehicles.splice(removedIndex, 0, removed);
+    markDirty();
+    renderAll();
+  });
 }
+
 function bindPanelActions(){
   $all("[data-open-vehicle]").forEach(function(b){ b.addEventListener("click", function(){ openVehicleModal(b.dataset.openVehicle); }); });
   $all("[data-open-invoice]").forEach(function(b){ b.addEventListener("click", function(){ openInvoiceModal(b.dataset.openInvoice); }); });
   $all("[data-open-analysis]").forEach(function(b){ b.addEventListener("click", function(){ openAnalysisModal(b.dataset.openAnalysis); }); });
+}
+
+/* Toast avec bouton d'annulation (delai de grace de 5s), utilise pour les
+   suppressions afin d'eviter un confirm() natif bloquant et sans recours. */
+function toastWithUndo(msg, onUndo){
+  var el = $("#toast");
+  clearTimeout(toast._t);
+  el.innerHTML = escapeHtml(msg) + ' <button type="button" class="toast-undo-btn">Annuler</button>';
+  el.className = "toast";
+  el.classList.remove("hidden");
+  var done = false;
+  var timer = setTimeout(function(){ if (!done){ done = true; el.classList.add("hidden"); } }, 5000);
+  el.querySelector(".toast-undo-btn").addEventListener("click", function(){
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    el.classList.add("hidden");
+    onUndo();
+  });
 }
 
 /* =====================================================================
@@ -918,21 +1037,23 @@ function renderAllVehiclesPanel(){
         state.partners.map(function(p){ return '<option value="'+p.id+'">'+escapeHtml(p.distributeur)+'</option>'; }).join("") + '</select>' +
         '<select id="all-filter-statut"><option value="">Tous statuts</option>' +
         Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select></div>' +
+      '<div class="veh-search-toolbar"><input type="text" id="all-veh-search" placeholder="Rechercher (client, modèle, immatriculation, concession...)"></div>' +
       '<div class="table-wrap"><table class="data-table" id="table-all-vehicles"></table></div>' +
     '</section>';
   function refresh(){
-    var pf = $("#all-filter-partner").value, sf = $("#all-filter-statut").value;
+    var pf = $("#all-filter-partner").value, sf = $("#all-filter-statut").value, q = $("#all-veh-search").value;
     var list = state.vehicles.filter(function(v){ if (pf && v.partnerId!==pf) return false; if (sf && v.statutLivraison!==sf) return false; return true; });
-    renderVehicleTable("#table-all-vehicles", list, false);
+    renderVehicleTable("#table-all-vehicles", list, q, true);
     var caHt = list.reduce(function(s,v){ return s+Number(v.montantHT||0); }, 0);
     var commission = full ? list.reduce(function(s,v){ var c=commissionFor(v); return s+(c||0); }, 0) : null;
     var livres = list.filter(function(v){ return v.statutLivraison==="LIVRE"; });
     $("#kpi-all").innerHTML = kpiCard("Véhicules réseau", list.length, "", "accent") +
-      (full ? kpiCard("CA HT total", fmtMoney(caHt), "", "") + kpiCard("Commission réseau due", fmtMoney(commission), "", "warn") : "") +
+      (full ? kpiCard("CA HT total", fmtMoney(caHt), "", "") + kpiCard("Commission réseau due", fmtMoney(commission), "", "warn") : lockedKpiCard("CA HT total") + lockedKpiCard("Commission réseau due")) +
       kpiCard("Véhicules livrés", livres.length, "sur "+list.length, "ok");
   }
   $("#all-filter-partner").addEventListener("change", refresh);
   $("#all-filter-statut").addEventListener("change", refresh);
+  $("#all-veh-search").addEventListener("input", refresh);
   refresh();
 }
 
@@ -984,7 +1105,13 @@ function renderAdminPanel(){
       '<div class="param-text">' +
         (p.siren ? 'SIREN '+escapeHtml(p.siren)+' — ' : '') + 'SIRET '+escapeHtml(p.siret)+'<br>' +
         escapeHtml(p.adresse)+', '+escapeHtml(p.cp)+' '+escapeHtml(p.ville)+'<br>' +
-        'Taux : '+fmtPct(p.commissionPct)+' — '+list.length+' véhicule(s) enregistré(s)' +
+        list.length+' véhicule(s) enregistré(s)' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;">' +
+        '<label style="font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;">Taux</label>' +
+        '<input type="number" step="0.01" min="0" value="'+(p.commissionPct!=null?p.commissionPct:0)+'" data-rate-input="'+p.id+'" style="width:80px;padding:5px 8px;background:var(--bg2);border:1px solid var(--line);border-radius:6px;color:var(--tx1);font-size:12px;">' +
+        '<span class="param-text">%</span>' +
+        '<button class="btn small" data-save-rate="'+p.id+'">Enregistrer le taux</button>' +
       '</div>' +
       '<span class="pill '+(signe?"ok":"warn")+'" style="margin-top:8px;display:inline-block;">'+(signe?"✓ Contrat signé":"⏳ Simulation / non signé")+'</span>' +
     '</div>';
@@ -995,6 +1122,7 @@ function renderAdminPanel(){
     '<div class="admin-section-title">Concessions enregistrées</div>' +
     '<div class="admin-partner-list">' + (cards || '<span class="param-text">Aucune concession enregistrée.</span>') + '</div>' +
     '<div class="admin-section-title">Ajouter une nouvelle concession / fournisseur</div>' +
+    '<div class="form-section-title">① Identité</div>' +
     '<div class="form-grid">' +
       '<div class="form-row"><label>Clé interne (sans espace, ex : RENAULT_FRANCE)</label><input type="text" id="adm-key" placeholder="EX_CONCESSION"></div>' +
       '<div class="form-row"><label>Nom affiché dans l\'app</label><input type="text" id="adm-nom" placeholder="Ex : Renault France"></div>' +
@@ -1003,6 +1131,7 @@ function renderAdminPanel(){
       '<div class="form-row"><label>Raison sociale (facturation)</label><input type="text" id="adm-raison" placeholder="Ex : RENAULT SAS"></div>' +
       '<div class="form-row"><label>Forme juridique (optionnel)</label><input type="text" id="adm-forme" placeholder="Ex : SAS au capital de 5 000 000 €"></div>' +
     '</div>' +
+    '<div class="form-section-title">② Coordonnées</div>' +
     '<div class="form-grid">' +
       '<div class="form-row"><label>Adresse ligne 1</label><input type="text" id="adm-adresse1" placeholder="Ex : 13-15 Quai Le Gallo"></div>' +
       '<div class="form-row"><label>Adresse ligne 2 (CP + ville, pays)</label><input type="text" id="adm-adresse2" placeholder="Ex : 92100 Boulogne-Billancourt, FR"></div>' +
@@ -1011,15 +1140,17 @@ function renderAdminPanel(){
       '<div class="form-row"><label>SIREN</label><input type="text" id="adm-siren" placeholder="Ex : 780 129 987"></div>' +
       '<div class="form-row"><label>SIRET</label><input type="text" id="adm-siret" placeholder="Ex : 780 129 987 00012"></div>' +
     '</div>' +
-    '<div class="form-row" style="max-width:220px;"><label>Taux de commission (% — valeur de départ, modifiable dans le Worker)</label><input type="number" step="0.01" min="0" id="adm-taux" placeholder="Ex : 1.00"></div>' +
+    '<div class="form-section-title">③ Contrat</div>' +
+    '<div class="form-row" style="max-width:220px;"><label>Taux de commission (%)</label><input type="number" step="0.01" min="0" id="adm-taux" placeholder="Ex : 1.00"></div>' +
+    '<div class="modal-note">Le taux est actif immédiatement dès « Créer la concession » puis « Enregistrer sur GitHub » — aucun redéploiement du Worker n\'est nécessaire.</div>' +
     '<div class="actions-row">' +
-      '<button class="btn" id="adm-preview-btn">👁 Prévisualiser le code Worker</button>' +
+      '<button class="btn" id="adm-preview-btn">👁 Aperçu du code (optionnel, pour archivage)</button>' +
       '<button class="btn primary" id="adm-create-btn">+ Créer la concession</button>' +
     '</div>' +
     '<div id="adm-snippet-wrap" class="hidden">' +
-      '<div class="admin-section-title">Code à coller dans <code>worker/src/index.js</code></div>' +
-      '<div class="modal-note">Les taux de commission sont verrouillés côté Worker (jamais éditables depuis l\'app) : collez ce code dans <code>PARTNER_CONTRACTS</code> et <code>defaultPartners()</code>, puis redéployez avec <code>wrangler deploy</code>.</div>' +
-      '<textarea id="adm-snippet" readonly style="width:100%;min-height:180px;font-family:var(--mono);font-size:11.5px;background:var(--bg2);color:var(--tx1);border:1px solid var(--line);border-radius:8px;padding:12px;"></textarea>' +
+      '<div class="admin-section-title">Extrait de code (optionnel)</div>' +
+      '<div class="modal-note">Ceci est purement informatif / pour archivage dans le dépôt de code — la concession et son taux sont déjà actifs sans cette étape.</div>' +
+      '<textarea id="adm-snippet" readonly style="width:100%;min-height:140px;font-family:var(--mono);font-size:11.5px;background:var(--bg2);color:var(--tx1);border:1px solid var(--line);border-radius:8px;padding:12px;"></textarea>' +
     '</div>' +
   '</section>';
 
@@ -1027,12 +1158,31 @@ function renderAdminPanel(){
     btn.addEventListener("click", function(){
       var p = partnerById(btn.dataset.removePartner);
       if (!p) return;
-      var nbVehicles = vehiclesForPartner(p.id).length;
-      var msg = "Retirer « " + p.distributeur + " » de l'annuaire ?" + (nbVehicles ? " (" + nbVehicles + " véhicule(s) resteront rattachés à cette concession dans les données — pensez à les réaffecter ou les supprimer.)" : "");
-      if (!confirm(msg)) return;
-      state.partners = state.partners.filter(function(x){ return x.id !== p.id; });
+      var idx = state.partners.findIndex(function(x){ return x.id === p.id; });
+      if (idx === -1) return;
+      var removed = state.partners[idx];
+      state.partners.splice(idx, 1);
       markDirty();
-      toast("Concession retirée de l'annuaire (n'oubliez pas de retirer aussi son entrée PARTNER_CONTRACTS dans le Worker).", "ok");
+      renderAll();
+      var nbVehicles = vehiclesForPartner(p.id).length;
+      toastWithUndo("Concession retirée" + (nbVehicles ? " (" + nbVehicles + " véhicule(s) restent rattachés dans les données)" : "") + ".", function(){
+        state.partners.splice(idx, 0, removed);
+        markDirty();
+        renderAll();
+      });
+    });
+  });
+
+  $all("[data-save-rate]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var p = partnerById(btn.dataset.saveRate);
+      if (!p) return;
+      var input = $('[data-rate-input="'+p.id+'"]');
+      var val = parseFloat(input.value);
+      if (isNaN(val) || val < 0){ toast("Taux invalide.", "err"); return; }
+      p.commissionPct = val;
+      markDirty();
+      toast("Taux mis à jour pour " + p.distributeur + " — pensez à « Enregistrer sur GitHub ».", "ok");
       renderAll();
     });
   });
@@ -1051,14 +1201,11 @@ function renderAdminPanel(){
     var cpVille = adresse2.split(",")[0] || "";
     var cp = (cpVille.match(/\d{4,5}/) || [""])[0];
     var ville = cpVille.replace(cp, "").trim();
-    var partner = { id: id, distributeur: nom, adresse: adresse1, cp: cp, ville: ville, siren: siren, siret: siret, telephoneStandard: "", marques: [], contactNom: "", contactEmail: "", contactTel: "" };
+    var partner = { id: id, distributeur: nom, adresse: adresse1, cp: cp, ville: ville, siren: siren, siret: siret, telephoneStandard: "", marques: [], contactNom: "", contactEmail: "", contactTel: "", commissionPct: taux };
     var snippet =
-      "// --- 1) Ajouter dans PARTNER_CONTRACTS ---\n" +
-      "  " + id + ": { commissionPct: " + taux + ", locked: true, signedDate: null, contratRef: null, perimetreContrat: null, conditionDeclenchement: null },\n\n" +
-      "// --- 2) Ajouter dans defaultPartners() ---\n" +
-      "    { id:\"" + id + "\", distributeur:\"" + nom.replace(/"/g,'\\"') + "\", adresse:\"" + adresse1.replace(/"/g,'\\"') + "\", cp:\"" + cp + "\", ville:\"" + ville.replace(/"/g,'\\"') + "\", siren:\"" + siren + "\", siret:\"" + siret + "\", telephoneStandard:\"\", marques:[], contactNom:\"\", contactEmail:\"\", contactTel:\"\" },\n\n" +
-      "// Raison sociale (facturation) : " + raison + (raison !== nom ? "" : "") + "\n" +
-      "// Puis : wrangler deploy";
+      "// Concession creee via le panel Admin (deja active, ceci est juste une trace) :\n" +
+      "{ id:\"" + id + "\", distributeur:\"" + nom.replace(/"/g,'\\"') + "\", adresse:\"" + adresse1.replace(/"/g,'\\"') + "\", cp:\"" + cp + "\", ville:\"" + ville.replace(/"/g,'\\"') + "\", siren:\"" + siren + "\", siret:\"" + siret + "\", commissionPct:" + taux + " }\n" +
+      "// Raison sociale (facturation) : " + raison;
     return { partner: partner, snippet: snippet };
   }
 
@@ -1075,10 +1222,8 @@ function renderAdminPanel(){
     if (partnerById(built.partner.id)){ toast("Cette clé interne existe déjà.", "err"); return; }
     state.partners.push(built.partner);
     markDirty();
-    $("#adm-snippet").value = built.snippet;
-    $("#adm-snippet-wrap").classList.remove("hidden");
-    toast("Concession ajoutée à l'annuaire. Copiez le code ci-dessous dans le Worker pour activer son taux, puis « Enregistrer sur GitHub ».", "ok");
-    renderNavTabs();
+    toast("Concession ajoutée avec son taux actif. Cliquez « Enregistrer sur GitHub » pour la conserver.", "ok");
+    renderAll();
   });
 }
 
@@ -1108,6 +1253,71 @@ function submitVehicle(){
     montantHT: null, statutFacturation: "NON_FACTURE", statutPaiement: "A_VERIFIER", numeroFacture: "", dateFacture: ""
   });
   markDirty(); closeModal("modal-vehicle"); toast("Véhicule ajouté à la liste de travail.", "ok"); renderAll();
+}
+
+/* =====================================================================
+   MODALE — DETAILS / MODIFICATION D'UN VEHICULE EXISTANT
+   Remplace l'edition en ligne dans le tableau : tous les champs regroupes
+   par section, plus lisible qu'un tableau a 16 colonnes editables.
+   ===================================================================== */
+function openVehicleDetailsModal(vehicleId){
+  var v = state.vehicles.find(function(x){ return x.id === vehicleId; });
+  if (!v) return;
+  var full = state.scope === "FULL";
+  $("#vd-save-btn").dataset.vehicleId = vehicleId;
+  $("#vd-delete-btn").dataset.vehicleId = vehicleId;
+  $("#vd-client").value = v.client || "";
+  $("#vd-conducteur").value = v.conducteur || "";
+  $("#vd-modele").value = v.modele || "";
+  $("#vd-immat").value = v.immatriculation || "";
+  $("#vd-vin").value = v.vin || "";
+  $("#vd-statut").value = v.statutLivraison || "COMMANDE";
+  $("#vd-date-prevue").value = isoToFr(v.dateLivraisonPrevue);
+  $("#vd-date-effective").value = isoToFr(v.dateLivraisonEffective);
+  $("#vd-statut-source").value = v.statutVehiculeSource || "";
+  $("#vd-leasing").value = v.societeLeasing || "";
+  $("#vd-numcontrat").value = v.numeroContrat || "";
+  $("#vd-remarques").value = v.remarques || "";
+
+  $("#vd-financier-title").classList.toggle("hidden", !full);
+  $("#vd-financier-fields").classList.toggle("hidden", !full);
+  if (full){
+    $("#vd-montant").value = v.montantHT != null ? v.montantHT : "";
+    $("#vd-statut-paiement").value = v.statutPaiement || "A_VERIFIER";
+    $("#vd-numfacture").value = v.numeroFacture || "";
+    $("#vd-datefacture").value = isoToFr(v.dateFacture);
+  }
+  openModal("modal-vehicle-details");
+}
+function saveVehicleDetails(){
+  var id = $("#vd-save-btn").dataset.vehicleId;
+  var v = state.vehicles.find(function(x){ return x.id === id; });
+  if (!v) return;
+  var client = $("#vd-client").value.trim();
+  if (!client){ toast("Le champ Client est obligatoire.", "err"); return; }
+  v.client = client;
+  v.conducteur = $("#vd-conducteur").value.trim();
+  v.modele = $("#vd-modele").value.trim();
+  v.immatriculation = $("#vd-immat").value.trim().toUpperCase();
+  v.vin = $("#vd-vin").value.trim().toUpperCase();
+  v.statutLivraison = $("#vd-statut").value;
+  v.dateLivraisonPrevue = frToIso($("#vd-date-prevue").value);
+  v.dateLivraisonEffective = frToIso($("#vd-date-effective").value);
+  v.statutVehiculeSource = $("#vd-statut-source").value.trim();
+  v.societeLeasing = $("#vd-leasing").value.trim();
+  v.numeroContrat = $("#vd-numcontrat").value.trim();
+  v.remarques = $("#vd-remarques").value.trim();
+  if (state.scope === "FULL"){
+    v.montantHT = parseFloat($("#vd-montant").value);
+    if (isNaN(v.montantHT)) v.montantHT = null;
+    v.statutPaiement = $("#vd-statut-paiement").value;
+    v.numeroFacture = $("#vd-numfacture").value.trim();
+    v.dateFacture = frToIso($("#vd-datefacture").value);
+  }
+  markDirty();
+  closeModal("modal-vehicle-details");
+  toast("Véhicule mis à jour.", "ok");
+  renderAll();
 }
 
 /* =====================================================================
@@ -1220,6 +1430,18 @@ async function saveAll(){
     var s = $("#sync-status"); s.textContent = "Échec de l'enregistrement"; s.style.color = "var(--err)";
   }
 }
+async function autoSaveIfDirty(){
+  if (!state.dirty) return;
+  try {
+    await apiSaveData({ partners: state.partners, vehicles: state.vehicles });
+    markClean();
+    toast("Sauvegarde automatique effectuée.", "ok");
+  } catch(e){
+    // Echec silencieux : on retentera au prochain cycle, l'utilisateur garde
+    // la main via le bouton "Enregistrer sur GitHub" en cas de souci persistant.
+  }
+}
+setInterval(autoSaveIfDirty, 60000);
 async function reloadAll(){
   if (state.dirty && !confirm("Recharger écrasera vos modifications non enregistrées. Continuer ?")) return;
   // Rafraichissement complet de la page (recupere aussi tout nouveau code deploye),
@@ -1257,6 +1479,22 @@ document.getElementById("export-csv-btn").addEventListener("click", function(){ 
 document.getElementById("import-csv-btn").addEventListener("click", function(){ document.getElementById("import-csv-file").click(); });
 document.getElementById("import-csv-file").addEventListener("change", function(e){ if (e.target.files[0]) importCsvFile(e.target.files[0]); e.target.value = ""; });
 document.getElementById("vehicle-submit-btn").addEventListener("click", submitVehicle);
+document.getElementById("vd-save-btn").addEventListener("click", saveVehicleDetails);
+document.getElementById("vd-delete-btn").addEventListener("click", function(){
+  var id = this.dataset.vehicleId;
+  closeModal("modal-vehicle-details");
+  deleteVehicleWithUndo(id);
+});
+document.getElementById("nav-search").addEventListener("input", function(){
+  var q = this.value.trim().toLowerCase();
+  var count = 0;
+  $all("#nav-tabs .ntab").forEach(function(tab){
+    var match = !q || tab.textContent.toLowerCase().indexOf(q) !== -1 || (tab.title||"").toLowerCase().indexOf(q) !== -1;
+    tab.style.display = match ? "" : "none";
+    if (match) count++;
+  });
+  $("#nav-search-count").textContent = q ? (count + " onglet(s) trouvé(s)") : "";
+});
 document.getElementById("invoice-select-all").addEventListener("click", function(){ $all("#invoice-vehicle-table .inv-chk").forEach(function(c){ c.checked=true; }); updateInvoiceTotal(); });
 document.getElementById("invoice-print-btn").addEventListener("click", printInvoice);
 $all("[data-close]").forEach(function(b){ b.addEventListener("click", function(){ closeModal(b.dataset.close); }); });
