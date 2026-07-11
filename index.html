@@ -891,14 +891,14 @@ function renderPartnerPanel(p, searchQuery){
     ? '<span class="rate-display">' + fmtPct(p.commissionPct) + '</span>'
     : '<span class="param-text">🔒 Masqué — accès restreint (Livraison uniquement)</span>';
 
+  var simTag = !p.signedDate ? ' <span style="color:var(--tx3);font-weight:400;">(simulation)</span>' : '';
   var commissionHighlightRow = !full
     ? '<div class="kpi-highlight-row"><div class="kpi-highlight"><div class="kh-label">Commission HT totale</div><div class="kh-value">🔒</div><div class="kh-sub">Accès complet requis</div></div>' +
-      '<div class="kpi-highlight"><div class="kh-label">Commission facturable</div><div class="kh-value">🔒</div><div class="kh-sub">Accès complet requis</div></div>' +
       '<div class="kpi-highlight"><div class="kh-label">Commission encaissée</div><div class="kh-value">🔒</div><div class="kh-sub">Accès complet requis</div></div></div>'
     : '<div class="kpi-highlight-row">' +
-        '<div class="kpi-highlight"><div class="kh-label">Commission HT totale (toutes lignes, estimée)</div><div class="kh-value">'+fmtMoney(commission)+'</div><div class="kh-sub">'+list.length+' véhicule(s) au total</div></div>' +
-        '<div class="kpi-highlight warn"><div class="kh-label">Commission facturable</div><div class="kh-value">'+fmtMoney(k.commissionFacturable)+'</div><div class="kh-sub">'+k.vehiculesLivresAvecDate+' véhicule(s) livré(s) (date effective renseignée)</div></div>' +
-        '<div class="kpi-highlight ok"><div class="kh-label">Commission déjà encaissée</div><div class="kh-value">'+fmtMoney(commissionEncaissee)+'</div><div class="kh-sub">véhicules au statut de paiement « Payé »</div></div>' +
+        '<div class="kpi-highlight"><div class="kh-label">Commission HT totale'+simTag+'</div><div class="kh-value">'+fmtMoney(commission)+'</div>' +
+          '<div class="kh-sub">Facturable (Livré — paiement à vérifier) :<br><strong style="color:var(--ok)">'+fmtMoney(k.commissionFacturable)+'</strong></div></div>' +
+        '<div class="kpi-highlight ok"><div class="kh-label">Commission encaissée'+simTag+'</div><div class="kh-value">'+fmtMoney(commissionEncaissee)+'</div></div>' +
       '</div>';
 
   var html = '<section class="tab-panel active">' +
