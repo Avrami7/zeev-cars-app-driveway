@@ -112,6 +112,17 @@ input,select,textarea{font-family:inherit}
 .kpi.locked .k-value{font-size:18px}
 .kpi .k-lock-hint{font-size:10px;color:var(--tx3);margin-top:4px}
 
+.kpi-highlight-row{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:18px;overflow:hidden}
+.kpi-highlight{flex:1;padding:16px 20px;border-right:1px solid var(--line)}
+.kpi-highlight:last-child{border-right:none}
+.kpi-highlight .kh-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);margin-bottom:8px}
+.kpi-highlight .kh-value{font-family:var(--disp);font-size:26px;font-weight:700;color:var(--tx1)}
+.kpi-highlight.ok .kh-value{color:var(--ok)}
+.kpi-highlight.warn .kh-value{color:var(--warn)}
+.kpi-highlight .kh-sub{font-size:11px;color:var(--tx2);margin-top:8px}
+.kpi-highlight .kh-sub strong{color:var(--tx1);font-weight:600}
+@media (max-width:760px){ .kpi-highlight-row{flex-direction:column} .kpi-highlight{border-right:none;border-bottom:1px solid var(--line)} .kpi-highlight:last-child{border-bottom:none} }
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:11px 18px;font-size:12.5px;color:var(--tx1);box-shadow:var(--shadow);z-index:300;display:flex;align-items:center;gap:12px}
 .toast-undo-btn{background:none;border:none;color:var(--accent);font-weight:700;text-decoration:underline;cursor:pointer;font-size:12.5px;padding:0;white-space:nowrap}
 
@@ -822,6 +833,21 @@ function computePartnerKpis(p){
   var nonLivres = list.length - livres.length;
   var facturables = livres.filter(function(v){ return v.statutFacturation !== "FACTURE"; });
 
+  // Commission facturable : uniquement les vehicules effectivement livres
+  // (statut LIVRE + date de livraison effective renseignee), quel que soit
+  // leur statut de paiement -- distincte du total estime (toutes lignes)
+  // et de l'encaisse (deja paye).
+  var commissionFacturable = 0, vehiculesLivresAvecDate = 0;
+  if (full){
+    livres.forEach(function(v){
+      if (!v.dateLivraisonEffective) return;
+      var c = commissionFor(v);
+      if (c == null) return;
+      commissionFacturable += c;
+      vehiculesLivresAvecDate++;
+    });
+  }
+
   var commissionEncaissee = 0, commissionEnAttente = 0, retardsJours = [];
   if (full){
     list.forEach(function(v){
@@ -844,6 +870,7 @@ function computePartnerKpis(p){
     if (moisSpan >= 2){ estimationAnnuelle = commission / moisSpan * 12; estimationSub = "projection sur " + moisSpan + " mois d'historique"; }
   }
   return { full:full, list:list, caHt:caHt, commission:commission, livres:livres, nonLivres:nonLivres, facturables:facturables,
+    commissionFacturable:commissionFacturable, vehiculesLivresAvecDate:vehiculesLivresAvecDate,
     commissionEncaissee:commissionEncaissee, commissionEnAttente:commissionEnAttente, delaiMoyen:delaiMoyen,
     estimationAnnuelle:estimationAnnuelle, estimationSub:estimationSub };
 }
@@ -888,6 +915,16 @@ function renderPartnerPanel(p, searchQuery){
     ? '<span class="rate-display">' + fmtPct(p.commissionPct) + '</span>'
     : '<span class="param-text">🔒 Masqué — accès restreint (Livraison uniquement)</span>';
 
+  var commissionHighlightRow = !full
+    ? '<div class="kpi-highlight-row"><div class="kpi-highlight"><div class="kh-label">Commission HT totale</div><div class="kh-value">🔒</div><div class="kh-sub">Accès complet requis</div></div>' +
+      '<div class="kpi-highlight"><div class="kh-label">Commission facturable</div><div class="kh-value">🔒</div><div class="kh-sub">Accès complet requis</div></div>' +
+      '<div class="kpi-highlight"><div class="kh-label">Commission encaissée</div><div class="kh-value">🔒</div><div class="kh-sub">Accès complet requis</div></div></div>'
+    : '<div class="kpi-highlight-row">' +
+        '<div class="kpi-highlight"><div class="kh-label">Commission HT totale (toutes lignes, estimée)</div><div class="kh-value">'+fmtMoney(commission)+'</div><div class="kh-sub">'+list.length+' véhicule(s) au total</div></div>' +
+        '<div class="kpi-highlight warn"><div class="kh-label">Commission facturable</div><div class="kh-value">'+fmtMoney(k.commissionFacturable)+'</div><div class="kh-sub">'+k.vehiculesLivresAvecDate+' véhicule(s) livré(s) (date effective renseignée)</div></div>' +
+        '<div class="kpi-highlight ok"><div class="kh-label">Commission déjà encaissée</div><div class="kh-value">'+fmtMoney(commissionEncaissee)+'</div><div class="kh-sub">véhicules au statut de paiement « Payé »</div></div>' +
+      '</div>';
+
   var html = '<section class="tab-panel active">' +
     '<div class="print-report-header"><h2>' + escapeHtml(p.distributeur) + '</h2><div class="print-report-date">Édité le ' + isoToFr(todayIso()) + '</div></div>' +
     '<div class="bandeau bandeau-ok">Entité à facturer : <strong>' + escapeHtml(p.distributeur.toUpperCase()) + '</strong>' +
@@ -906,16 +943,15 @@ function renderPartnerPanel(p, searchQuery){
       (full ? '<button class="btn" data-open-invoice="'+p.id+'">Facture consolidée</button>' : '') +
       '<button class="btn" data-open-analysis="'+p.id+'">Analyse client</button>' +
     '</div>' +
+    commissionHighlightRow +
     '<div class="kpi-row">' +
       kpiCard("Total véhicules", list.length, "", "accent", "kpi-total-vehicules") +
       kpiCard("Livrés", livres.length, "", "ok", "kpi-livres") +
       kpiCard("Non livrés", nonLivres, "", nonLivres ? "warn" : "", "kpi-non-livres") +
       (full ? kpiCard("Facturables", facturables.length, "livrés non encore facturés", "accent", "kpi-facturables") : lockedKpiCard("Facturables")) +
       (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "", "kpi-valeur-vente") : lockedKpiCard("Valeur de vente totale (HT)")) +
-      (full ? kpiCard("Commission HT totale", fmtMoney(commission), "", "warn", "kpi-commission-totale") : lockedKpiCard("Commission HT totale")) +
     '</div>' +
     '<div class="kpi-row">' +
-      (full ? kpiCard("Commission encaissée", fmtMoney(commissionEncaissee), "", "ok", "kpi-commission-encaissee") : lockedKpiCard("Commission encaissée")) +
       (full ? kpiCard("Commission en attente", fmtMoney(commissionEnAttente), "", "warn", "kpi-commission-attente") : lockedKpiCard("Commission en attente")) +
       (full ? kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "", "kpi-delai-reglement") : lockedKpiCard("Délai moyen de règlement")) +
       (full ? kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "", "kpi-estimation-annuelle") : lockedKpiCard("Estimation annuelle")) +
