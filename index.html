@@ -841,6 +841,7 @@ function computePartnerKpis(p){
   if (full){
     livres.forEach(function(v){
       if (!v.dateLivraisonEffective) return;
+      if (v.statutPaiement === "PAYE") return; // deja encaisse : ne compte pas aussi en "facturable"
       var c = commissionFor(v);
       if (c == null) return;
       commissionFacturable += c;
@@ -873,31 +874,6 @@ function computePartnerKpis(p){
     commissionFacturable:commissionFacturable, vehiculesLivresAvecDate:vehiculesLivresAvecDate,
     commissionEncaissee:commissionEncaissee, commissionEnAttente:commissionEnAttente, delaiMoyen:delaiMoyen,
     estimationAnnuelle:estimationAnnuelle, estimationSub:estimationSub };
-}
-
-/* Mise a jour EN DIRECT (a chaque frappe) des chiffres calcules, sans
-   reconstruire le tableau -- evite toute perte de focus pendant la saisie. */
-function refreshPartnerKpisLive(){
-  var p = partnerById(state.activeTab);
-  if (!p) return;
-  var k = computePartnerKpis(p);
-  function set(id, text){ var el = document.getElementById(id); if (el) el.textContent = text; }
-  set("kpi-total-vehicules", k.list.length);
-  set("kpi-livres", k.livres.length);
-  set("kpi-non-livres", k.nonLivres);
-  if (k.full){
-    set("kpi-facturables", k.facturables.length);
-    set("kpi-valeur-vente", fmtMoney(k.caHt));
-    set("kpi-commission-totale", fmtMoney(k.commission));
-    set("kpi-commission-encaissee", fmtMoney(k.commissionEncaissee));
-    set("kpi-commission-attente", fmtMoney(k.commissionEnAttente));
-    set("kpi-delai-reglement", k.delaiMoyen != null ? (k.delaiMoyen + " j") : "—");
-    set("kpi-estimation-annuelle", k.estimationAnnuelle != null ? fmtMoney(k.estimationAnnuelle) : fmtMoney(0));
-  }
-  k.list.forEach(function(v){
-    var cell = document.getElementById("commission-cell-"+v.id);
-    if (cell) cell.textContent = v.montantHT != null ? fmtMoney(commissionFor(v)) : "—";
-  });
 }
 
 function lockedKpiCard(label){
@@ -948,11 +924,9 @@ function renderPartnerPanel(p, searchQuery){
       kpiCard("Total véhicules", list.length, "", "accent", "kpi-total-vehicules") +
       kpiCard("Livrés", livres.length, "", "ok", "kpi-livres") +
       kpiCard("Non livrés", nonLivres, "", nonLivres ? "warn" : "", "kpi-non-livres") +
-      (full ? kpiCard("Facturables", facturables.length, "livrés non encore facturés", "accent", "kpi-facturables") : lockedKpiCard("Facturables")) +
       (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "", "kpi-valeur-vente") : lockedKpiCard("Valeur de vente totale (HT)")) +
     '</div>' +
     '<div class="kpi-row">' +
-      (full ? kpiCard("Commission en attente", fmtMoney(commissionEnAttente), "", "warn", "kpi-commission-attente") : lockedKpiCard("Commission en attente")) +
       (full ? kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "", "kpi-delai-reglement") : lockedKpiCard("Délai moyen de règlement")) +
       (full ? kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "", "kpi-estimation-annuelle") : lockedKpiCard("Estimation annuelle")) +
     '</div>' +
