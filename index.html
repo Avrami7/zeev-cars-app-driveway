@@ -925,8 +925,7 @@ function renderPartnerPanel(p, searchQuery){
     '</div>' +
     commissionHighlightRow +
     '<div class="kpi-row">' +
-      kpiCard("Total véhicules", list.length, "", "accent", "kpi-total-vehicules") +
-      kpiCard("Livrés", livres.length, "", "ok", "kpi-livres") +
+      kpiCard("Livrés", livres.length, "sur " + list.length + " véhicule(s) au total", "ok", "kpi-livres") +
       kpiCard("Non livrés", nonLivres, "", nonLivres ? "warn" : "", "kpi-non-livres") +
       (full ? kpiCard("Valeur de vente totale (HT)", fmtMoney(caHt), "", "", "kpi-valeur-vente") : lockedKpiCard("Valeur de vente totale (HT)")) +
     '</div>' +
