@@ -798,8 +798,12 @@ function shortName(p){ return p.distributeur.split(" — ")[0]; }
    NAVIGATION
    ===================================================================== */
 function renderNavTabs(){
+  var nameCounts = {};
+  state.partners.forEach(function(p){ var n = shortName(p); nameCounts[n] = (nameCounts[n]||0) + 1; });
   var html = state.partners.map(function(p){
-    return '<button class="ntab'+(state.activeTab===p.id?" active":"")+'" data-tab="'+p.id+'" title="'+escapeAttr(p.distributeur)+' ('+escapeAttr((p.marques||[]).join("/"))+')">'+escapeHtml(shortName(p))+'</button>';
+    var n = shortName(p);
+    var label = nameCounts[n] > 1 ? n + " (" + (p.marques||[]).join("/") + ")" : n;
+    return '<button class="ntab'+(state.activeTab===p.id?" active":"")+'" data-tab="'+p.id+'" title="'+escapeAttr(p.distributeur)+' ('+escapeAttr((p.marques||[]).join("/"))+')">'+escapeHtml(label)+'</button>';
   }).join("");
   html += '<button class="ntab'+(state.activeTab==="all"?" active":"")+'" data-tab="all">Tous les véhicules commandés</button>';
   html += '<button class="ntab'+(state.activeTab==="dashboard"?" active":"")+'" data-tab="dashboard">Tableau de bord</button>';
