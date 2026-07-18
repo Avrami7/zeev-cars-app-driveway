@@ -505,7 +505,7 @@ const CONFIG = {
 };
 
 const STATUT_LABELS = { COMMANDE:"Commandé — en attente de livraison", LIVRE:"Livré", NON_LIVRE:"Non livré" };
-const state = { user:null, sessionToken:null, scope:null, partners:[], vehicles:[], dirty:false, activeTab:null, theme:"light" };
+const state = { user:null, sessionToken:null, scope:null, partners:[], vehicles:[], dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[] };
 
 var $ = function(s){ return document.querySelector(s); };
 var $all = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -754,6 +754,7 @@ async function bootApp(){
     var data = await apiGetData();
     state.partners = data.partners || [];
     state.vehicles = data.vehicles || [];
+    state.deletedVehicleIds = [];
     state.scope = data.scope || state.scope;
     if (data.user) state.user = Object.assign({}, state.user, data.user);
     renderUserBadge();
@@ -1003,10 +1004,12 @@ function deleteVehicleWithUndo(vehicleId){
   var removed = state.vehicles[idx];
   var removedIndex = idx;
   state.vehicles.splice(idx, 1);
+  if (state.deletedVehicleIds.indexOf(vehicleId) === -1) state.deletedVehicleIds.push(vehicleId);
   markDirty();
   renderAll();
   toastWithUndo("Véhicule supprimé.", function(){
     state.vehicles.splice(removedIndex, 0, removed);
+    state.deletedVehicleIds = state.deletedVehicleIds.filter(function(id){ return id !== vehicleId; });
     markDirty();
     renderAll();
   });
@@ -1258,7 +1261,7 @@ function submitVehicle(){
   state.vehicles.push({
     id: uid("v"), partnerId: partnerId,
     societeLeasing: $("#v-leasing").value.trim(), numeroContrat: $("#v-numcontrat").value.trim(),
-    client: client, conducteur: $("#v-conducteur").value.trim(),
+    client: client, conducteur: normalizeConducteurName($("#v-conducteur").value.trim()),
     modele: $("#v-modele").value.trim(), immatriculation: $("#v-immat").value.trim().toUpperCase(), vin: $("#v-vin").value.trim().toUpperCase(),
     statutLivraison: $("#v-statut").value,
     dateLivraisonPrevue: frToIso($("#v-date-prevue").value), dateLivraisonEffective: frToIso($("#v-date-effective").value),
@@ -1309,7 +1312,7 @@ function saveVehicleDetails(){
   var client = $("#vd-client").value.trim();
   if (!client){ toast("Le champ Client est obligatoire.", "err"); return; }
   v.client = client;
-  v.conducteur = $("#vd-conducteur").value.trim();
+  v.conducteur = normalizeConducteurName($("#vd-conducteur").value.trim());
   v.modele = $("#vd-modele").value.trim();
   v.immatriculation = $("#vd-immat").value.trim().toUpperCase();
   v.vin = $("#vd-vin").value.trim().toUpperCase();
@@ -1320,17 +1323,55 @@ function saveVehicleDetails(){
   v.societeLeasing = $("#vd-leasing").value.trim();
   v.numeroContrat = $("#vd-numcontrat").value.trim();
   v.remarques = $("#vd-remarques").value.trim();
+  var montantWarning = null;
   if (state.scope === "FULL"){
-    v.montantHT = parseFloat($("#vd-montant").value);
-    if (isNaN(v.montantHT)) v.montantHT = null;
+    var newMontant = parseFloat($("#vd-montant").value);
+    if (isNaN(newMontant)) newMontant = null;
+    if (newMontant != null) montantWarning = checkMontantOutlier(v, newMontant);
+    v.montantHT = newMontant;
     v.statutPaiement = $("#vd-statut-paiement").value;
     v.numeroFacture = $("#vd-numfacture").value.trim();
     v.dateFacture = frToIso($("#vd-datefacture").value);
   }
   markDirty();
   closeModal("modal-vehicle-details");
-  toast("Véhicule mis à jour.", "ok");
+  if (montantWarning) toast(montantWarning, "warn");
+  else toast("Véhicule mis à jour.", "ok");
   renderAll();
+}
+
+/* Normalise "M.NOM", "NOM Prenom", "prenom nom"... vers "Prenom NOM".
+   Heuristique simple, non garantie a 100% mais evite la plupart des
+   incoherences de saisie (M.GUERARD, HAMON Benoit, Gavel Maxime...). */
+function normalizeConducteurName(raw){
+  if (!raw) return raw;
+  var s = raw.replace(/^(mme|monsieur|mr|m)\.?\s*/i, "").trim();
+  var parts = s.split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return parts[0] ? (parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()) : raw;
+  function isUpper(w){ return w === w.toUpperCase() && w !== w.toLowerCase(); }
+  function cap(w){ return w.split(/(\s|-)/).map(function(p){ return p.length ? p.charAt(0).toUpperCase()+p.slice(1).toLowerCase() : p; }).join(""); }
+  var first = parts[0], last = parts[parts.length-1];
+  var firstUp = isUpper(first), lastUp = isUpper(last);
+  if (firstUp && !lastUp) return cap(last) + " " + first.toUpperCase();  // SURNAME firstname
+  if (lastUp && !firstUp) return cap(first) + " " + last.toUpperCase();  // Firstname SURNAME
+  if (firstUp && lastUp) return cap(last) + " " + first.toUpperCase();  // SURNAME FIRSTNAME (motif de nos donnees officielles)
+  return cap(first) + " " + last.toUpperCase();  // ni l'un ni l'autre : ordre naturel suppose
+}
+
+/* Avertissement non bloquant si le montant saisi devie fortement de la
+   moyenne deja enregistree pour le meme modele chez le meme partenaire. */
+function checkMontantOutlier(vehicle, newMontant){
+  var sameModel = state.vehicles.filter(function(v){
+    return v.id !== vehicle.id && v.partnerId === vehicle.partnerId && v.modele === vehicle.modele && v.montantHT != null;
+  });
+  if (sameModel.length < 2) return null;
+  var avg = sameModel.reduce(function(s,v){ return s + v.montantHT; }, 0) / sameModel.length;
+  if (avg <= 0) return null;
+  var deviation = Math.abs(newMontant - avg) / avg;
+  if (deviation > 0.3){
+    return "⚠ Véhicule enregistré, mais ce montant (" + fmtMoney(newMontant) + ") diffère de plus de 30 % de la moyenne pour ce modèle (" + fmtMoney(avg) + ") — à vérifier.";
+  }
+  return null;
 }
 
 /* =====================================================================
@@ -1435,7 +1476,8 @@ function toggleTheme(){
 async function saveAll(){
   $("#sync-status").textContent = "Enregistrement...";
   try {
-    await apiSaveData({ partners: state.partners, vehicles: state.vehicles });
+    await apiSaveData({ partners: state.partners, vehicles: state.vehicles, deletedVehicleIds: state.deletedVehicleIds });
+    state.deletedVehicleIds = [];
     markClean();
     toast("Données enregistrées.", "ok");
   } catch(e){
@@ -1446,7 +1488,8 @@ async function saveAll(){
 async function autoSaveIfDirty(){
   if (!state.dirty) return;
   try {
-    await apiSaveData({ partners: state.partners, vehicles: state.vehicles });
+    await apiSaveData({ partners: state.partners, vehicles: state.vehicles, deletedVehicleIds: state.deletedVehicleIds });
+    state.deletedVehicleIds = [];
     markClean();
     toast("Sauvegarde automatique effectuée.", "ok");
   } catch(e){
