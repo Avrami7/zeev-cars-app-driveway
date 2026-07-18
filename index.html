@@ -32,6 +32,10 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%}
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+html{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:thin}
 body{margin:0;background:var(--bg);color:var(--tx1);font-family:var(--mono);font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased;transition:background .2s ease,color .2s ease}
 .hidden{display:none !important}
 button{font-family:inherit;cursor:pointer}
@@ -203,6 +207,10 @@ main{padding:22px}
 .modal-close{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--tx2);font-size:14px}
 .modal-close:hover{color:var(--err);border-color:var(--err)}
 .modal-body{max-height:80vh;overflow-y:auto}
+.modal-body::-webkit-scrollbar{width:10px}
+.modal-body::-webkit-scrollbar-track{background:var(--bg2)}
+.modal-body::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.modal-body{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:thin}
 .form-row{margin-bottom:13px}
 .form-row label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:6px}
 .form-row input,.form-row select,.form-row textarea{width:100%;padding:9px 11px;background:var(--bg2);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:13px}
