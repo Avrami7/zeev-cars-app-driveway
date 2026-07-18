@@ -975,10 +975,11 @@ function renderVehicleTable(sel, list, query, showConcession){
   });
   var head = "<thead><tr>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
     (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
+    (full ? "<th>Commission HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
     "<th></th></tr></thead>";
   var body = "";
   if (!filtered.length){
-    var colspan = showConcession ? 7 : 6;
+    var colspan = (showConcession ? 7 : 6) + 1;
     body = '<tr class="empty-row"><td colspan="'+colspan+'">' + (query ? "Aucun véhicule ne correspond à « " + escapeHtml(query) + " »." : 'Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».') + '</td></tr>';
   } else {
     filtered.forEach(function(v){
@@ -990,6 +991,7 @@ function renderVehicleTable(sel, list, query, showConcession){
         '<td>'+escapeHtml(v.immatriculation)+'</td>' +
         '<td>'+statutPill(v.statutLivraison)+'</td>' +
         (full ? '<td class="num">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td>' : '<td class="num lock-cell" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
+        (full ? '<td class="num">'+(commissionFor(v)!=null?fmtMoney(commissionFor(v)):"—")+'</td>' : '<td class="num lock-cell" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
         '<td class="actions"><button class="btn small" data-details-vehicle="'+v.id+'">Détails</button> <button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td>' +
       '</tr>';
     });
