@@ -471,7 +471,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 <!-- MODALE — ANALYSE PARC CLIENT -->
 <div id="modal-analysis" class="modal-overlay hidden">
   <div class="modal-box wide">
-    <div class="modal-head"><h3>Analyse parc client — <span id="analysis-modal-partner-name">—</span></h3><button class="modal-close" data-close="modal-analysis">✕</button></div>
+    <div class="modal-head"><h3><span id="analysis-modal-partner-name">—</span></h3><button class="modal-close" data-close="modal-analysis">✕</button></div>
     <div class="modal-body" id="analysis-modal-body"></div>
     <div class="modal-foot"><button class="btn ghost" data-close="modal-analysis">Fermer</button></div>
   </div>
@@ -1424,24 +1424,107 @@ function printInvoice(){
 /* =====================================================================
    MODALE — ANALYSE PARC CLIENT
    ===================================================================== */
+/* Categorisation heuristique du vehicule a partir de son libelle "modele".
+   Priorite 1 : suffixe entre parentheses explicite, ex "(SUV)", "(Berline)".
+   Priorite 2 : dictionnaire de modeles connus.
+   Repli : "Véhicule particulier". Non garanti a 100%, ameliorable au cas
+   par cas si besoin (les categories mal detectees restent visibles et
+   modifiables en renommant le modele dans la fiche du vehicule). */
+function categorizeVehicle(modeleRaw){
+  var modele = (modeleRaw || "").toUpperCase();
+  var m = modele.match(/\(([^)]+)\)\s*$/);
+  if (m){
+    var tag = m[1].trim();
+    if (/UTILITAIRE|VAN|FOURGON/.test(tag)) return "Utilitaire";
+    if (/SUV/.test(tag)) return "SUV";
+    if (/BERLINE/.test(tag)) return "Berline";
+    if (/MONOSPACE/.test(tag)) return "Monospace";
+    if (/CITADINE/.test(tag)) return "Citadine";
+    if (/BREAK/.test(tag)) return "Break";
+    if (/COUPE|COUPÉ/.test(tag)) return "Coupé";
+    return tag.charAt(0) + tag.slice(1).toLowerCase();
+  }
+  var dict = [
+    [/SYMBIOZ|AUSTRAL|KUGA|SPORTAGE|ARONA|T-ROC|TIGUAN|X1\b|X3\b|Q3\b|3008|5008|C5 AIRCROSS|KAROQ|ATECA/, "SUV"],
+    [/SCENIC|TOURAN|ZAFIRA|PICASSO|VERSO/, "Monospace"],
+    [/S[ée]RIE 3|S[ée]RIE 5|CLASSE C|CLASSE E|A4\b|A6\b|MODEL 3|MODEL S|INSIGNIA|TALISMAN/, "Berline"],
+    [/CLIO|208\b|POLO|C3\b|YARIS|COROLLA|IBIZA|FABIA|MAZDA2/, "Citadine"],
+    [/MAXUS|UTILITAIRE|FOURGON|JUMPY|EXPERT|TRAFIC|TRANSIT|BOXER|DUCATO|VIVARO/, "Utilitaire"],
+  ];
+  for (var i=0;i<dict.length;i++){ if (dict[i][0].test(modele)) return dict[i][1]; }
+  return "Véhicule particulier";
+}
+
 function openAnalysisModal(partnerId){
   var p = partnerById(partnerId);
-  $("#analysis-modal-partner-name").textContent = p ? p.distributeur : "—";
-  var list = vehiclesForPartner(partnerId);
-  var byClient = {};
-  list.forEach(function(v){
-    var key = v.client || "Client non renseigné";
-    if (!byClient[key]) byClient[key] = { count:0, ca:0, livres:0 };
-    byClient[key].count++; byClient[key].ca += Number(v.montantHT||0);
-    if (v.statutLivraison==="LIVRE") byClient[key].livres++;
-  });
-  var clients = Object.keys(byClient).sort(function(a,b){ return byClient[b].ca-byClient[a].ca; });
   var full = state.scope === "FULL";
-  var body;
-  if (!clients.length) body = '<p class="param-text">Aucun véhicule saisi pour cette concession pour le moment.</p>';
-  else body = '<div class="table-wrap"><table class="data-table"><thead><tr><th>Client</th><th>Véhicules</th><th>Livrés</th>'+(full?'<th>CA HT</th>':'')+'</tr></thead><tbody>' +
-    clients.map(function(c){ var d=byClient[c]; return "<tr><td>"+escapeHtml(c)+"</td><td class='num'>"+d.count+"</td><td class='num'>"+d.livres+" / "+d.count+"</td>"+(full?"<td class='num'>"+fmtMoney(d.ca)+"</td>":"")+"</tr>"; }).join("") + "</tbody></table></div>";
-  $("#analysis-modal-body").innerHTML = body;
+  $("#analysis-modal-partner-name").textContent = (p ? p.distributeur : "—") + " — Tableau de bord exécutif";
+  var list = vehiclesForPartner(partnerId);
+
+  if (!list.length){
+    $("#analysis-modal-body").innerHTML = '<p class="param-text">Aucun véhicule saisi pour cette concession pour le moment.</p>';
+    openModal("modal-analysis");
+    return;
+  }
+
+  var withValue = list.filter(function(v){ return v.montantHT != null; });
+  var valeurTotale = withValue.reduce(function(s,v){ return s + v.montantHT; }, 0);
+  var valeurMoyenne = withValue.length ? valeurTotale / withValue.length : 0;
+
+  var byCat = {};
+  list.forEach(function(v){
+    var cat = categorizeVehicle(v.modele);
+    if (!byCat[cat]) byCat[cat] = { count:0, valeur:0, countValeur:0 };
+    byCat[cat].count++;
+    if (v.montantHT != null){ byCat[cat].valeur += v.montantHT; byCat[cat].countValeur++; }
+  });
+  var cats = Object.keys(byCat).sort(function(a,b){ return byCat[b].valeur - byCat[a].valeur; });
+  var topCat = cats[0];
+
+  var html = '';
+
+  html += '<div class="kpi-row">' +
+    kpiCard("Véhicules au parc", list.length, "", "accent") +
+    (full ? kpiCard("Valeur totale du parc HT", fmtMoney(valeurTotale), "hors taxes, hors assurances", "") : lockedKpiCard("Valeur totale du parc HT")) +
+    (full ? kpiCard("Valeur moyenne / véhicule", fmtMoney(valeurMoyenne), topCat||"", "warn") : lockedKpiCard("Valeur moyenne / véhicule")) +
+  '</div>';
+
+  if (full && cats.length){
+    html += '<div class="admin-section-title">Répartition par catégorie</div>';
+    html += '<div class="bar-chart" style="margin-bottom:18px;">' + cats.map(function(c){
+      var d = byCat[c];
+      var pctValeur = valeurTotale > 0 ? Math.round(d.valeur/valeurTotale*1000)/10 : 0;
+      return '<div class="bar-row"><span class="bar-label" title="'+escapeAttr(c)+'">'+escapeHtml(c)+'</span>' +
+        '<span class="bar-track"><span class="bar-fill" style="width:'+pctValeur+'%"></span></span>' +
+        '<span class="bar-val">'+pctValeur+' %</span></div>';
+    }).join('') + '</div>';
+
+    html += '<div class="table-wrap"><table class="data-table"><thead><tr><th>Catégorie</th><th>Véh.</th><th>Valeur totale HT</th><th>Valeur moy./véh.</th><th>% parc</th><th>% valeur</th></tr></thead><tbody>';
+    cats.forEach(function(c){
+      var d = byCat[c];
+      var pctParc = Math.round(d.count/list.length*1000)/10;
+      var pctValeur = valeurTotale > 0 ? Math.round(d.valeur/valeurTotale*1000)/10 : 0;
+      var moyCat = d.countValeur ? d.valeur/d.countValeur : 0;
+      html += '<tr><td>'+escapeHtml(c)+'</td><td class="num">'+d.count+'</td><td class="num">'+fmtMoney(d.valeur)+'</td><td class="num">'+fmtMoney(moyCat)+'</td><td class="num">'+pctParc+' %</td><td class="num">'+pctValeur+' %</td></tr>';
+    });
+    html += '<tr style="font-weight:700;background:var(--panel2);"><td>Total</td><td class="num">'+list.length+'</td><td class="num">'+fmtMoney(valeurTotale)+'</td><td class="num">'+fmtMoney(valeurMoyenne)+'</td><td class="num">100 %</td><td class="num">100 %</td></tr>';
+    html += '</tbody></table></div>';
+
+    html += '<div class="admin-section-title">📊 Synthèse commerciale — support de négociation (direction achats / gestionnaire de flotte)</div>';
+    html += '<div class="modal-note">' +
+      '<strong>Nom de la concession :</strong> ' + escapeHtml(p.distributeur.toUpperCase()) + '<br>' +
+      '<strong>Volume total du parc :</strong> ' + list.length + ' véhicule(s)<br>' +
+      '<strong>Valeur financière totale :</strong> ' + fmtMoney(valeurTotale) + '<br>' +
+      '<strong>Valeur moyenne par véhicule :</strong> ' + fmtMoney(valeurMoyenne) + '<br>' +
+      '<strong>Catégories identifiées :</strong> ' + cats.length + ' famille(s) distincte(s)<br>' +
+      cats.map(function(c, i){ var d = byCat[c]; return '<strong>Catégorie n°'+(i+1)+' :</strong> ' + escapeHtml(c) + ' (' + d.count + ' véh. — ' + fmtMoney(d.valeur) + ')'; }).join('<br>') + '<br>' +
+      '<strong>Potentiel de renouvellement :</strong> Annuel — flotte de ' + list.length + ' véhicule(s) géré(s)' +
+    '</div>';
+  } else if (!full){
+    html += '<div class="bandeau bandeau-warn">🔒 Répartition par catégorie et synthèse commerciale réservées aux comptes à accès complet.</div>';
+  }
+
+  $("#analysis-modal-body").innerHTML = html;
   openModal("modal-analysis");
 }
 
