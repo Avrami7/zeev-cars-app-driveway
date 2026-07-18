@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https://avatars.githubusercontent.com data:; connect-src 'self' https://zeev-cars-api-driveway.4wg2rh4rhp.workers.dev https://github.com; base-uri 'self'; object-src 'none'; frame-ancestors 'none';">
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -576,6 +577,7 @@ const apiLoginGithub = function(code, redirectUri){ return apiCall("/api/login-g
 const apiGetData = function(){ return apiCall("/api/data"); };
 const apiSaveData = function(payload){ return apiCall("/api/data", { method:"POST", body:payload }); };
 const apiGetCollaborators = function(){ return apiCall("/api/collaborators"); };
+const apiGetPaymentDetails = function(){ return apiCall("/api/payment-details"); };
 async function apiExportCsv(){
   if (!isApiConfigured()) throw new Error("Configuration manquante : renseignez CONFIG.apiBase.");
   var res = await fetch(CONFIG.apiBase + "/api/export", { headers:{ "Authorization":"Bearer " + state.sessionToken } });
@@ -1409,7 +1411,7 @@ function updateInvoiceTotal(){
   var total = $all("#invoice-vehicle-table .inv-chk:checked").reduce(function(s,c){ return s+parseFloat(c.dataset.amount||0); }, 0);
   $("#invoice-total").textContent = fmtMoney(total);
 }
-function printInvoice(){
+async function printInvoice(){
   var partnerId = $("#invoice-print-btn").dataset.partnerId;
   var p = partnerById(partnerId);
   var rows = $all("#invoice-vehicle-table tbody tr").filter(function(tr){ var c=tr.querySelector(".inv-chk"); return c && c.checked; });
@@ -1419,16 +1421,31 @@ function printInvoice(){
   var lines = rows.map(function(tr){
     var cells = tr.querySelectorAll("td");
     total += parseFloat(tr.querySelector(".inv-chk").dataset.amount||0);
-    return "<tr><td>"+cells[1].textContent+"</td><td>"+cells[2].textContent+"</td><td>"+cells[3].textContent+"</td><td style='text-align:right'>"+cells[4].textContent+"</td></tr>";
+    return "<tr><td>"+escapeHtml(cells[1].textContent)+"</td><td>"+escapeHtml(cells[2].textContent)+"</td><td>"+escapeHtml(cells[3].textContent)+"</td><td style='text-align:right'>"+escapeHtml(cells[4].textContent)+"</td></tr>";
   }).join("");
   var commission = p && p.commissionPct != null ? total * p.commissionPct / 100 : null;
+
+  // Coordonnees bancaires : recuperees a la volee depuis le Worker (secrets
+  // chiffres, jamais stockees dans le JSON GitHub ni dans le state du
+  // navigateur). Reserve aux comptes FULL cote serveur -- un compte
+  // LIVRAISON_ONLY n'atteint jamais cette section (bouton facture absent).
+  var bankBlock = "";
+  try {
+    var pay = await apiGetPaymentDetails();
+    bankBlock = "<p style='margin-top:14px'><strong>Coordonnées de paiement</strong><br>" +
+      escapeHtml(pay.beneficiaire) + "<br>IBAN " + escapeHtml(pay.iban) + " — BIC " + escapeHtml(pay.bic) + "</p>";
+  } catch(e){
+    bankBlock = "<p style='margin-top:14px;color:#b00'>⚠ Coordonnées de paiement non configurées — à ajouter manuellement avant envoi.</p>";
+  }
+
   $("#print-invoice-area").innerHTML =
     "<h2>Facture consolidée n° "+escapeHtml(number)+"</h2>" +
     "<p><strong>"+escapeHtml(p.distributeur.toUpperCase())+"</strong><br>"+escapeHtml(p.adresse)+", "+escapeHtml(p.cp)+" "+escapeHtml(p.ville)+"<br>SIRET "+escapeHtml(p.siret)+"</p>" +
     "<p>Date d'émission : "+dateEm+" — Date d'échéance : "+dateEch+"</p>" +
     "<table><thead><tr><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead><tbody>"+lines+"</tbody></table>" +
     "<p style='text-align:right;margin-top:14px'><strong>Total HT sélectionné : "+fmtMoney(total)+"</strong>" +
-    (commission!=null ? "<br>Commission ("+fmtPct(p.commissionPct)+") : "+fmtMoney(commission) : "") + "</p>";
+    (commission!=null ? "<br>Commission ("+fmtPct(p.commissionPct)+") : "+fmtMoney(commission) : "") + "</p>" +
+    bankBlock;
   document.body.classList.add("print-invoice-mode");
   window.print();
   setTimeout(function(){ document.body.classList.remove("print-invoice-mode"); }, 500);
