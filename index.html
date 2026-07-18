@@ -193,6 +193,7 @@ main{padding:22px}
 .data-table td input,.data-table td select{width:100%;min-width:90px;padding:6px 8px;background:var(--bg2);border:1px solid transparent;border-radius:5px;color:var(--tx1);font-size:12px}
 .data-table td input:focus,.data-table td select:focus{border-color:var(--accent)}
 .data-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+.data-table td.num-col,.data-table th.num-col{text-align:center;width:42px;color:var(--tx3);font-variant-numeric:tabular-nums;font-size:11.5px}
 .data-table td.actions{white-space:nowrap;text-align:right}
 .data-table td.chk{text-align:center;width:32px}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:600}
@@ -978,18 +979,19 @@ function renderVehicleTable(sel, list, query, showConcession){
            (v.immatriculation||"").toLowerCase().indexOf(query)!==-1 ||
            (showConcession && p2 && p2.distributeur.toLowerCase().indexOf(query)!==-1);
   });
-  var head = "<thead><tr>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
+  var head = "<thead><tr><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
     (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
     (full ? "<th>Commission HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
     "<th></th></tr></thead>";
   var body = "";
   if (!filtered.length){
-    var colspan = (showConcession ? 7 : 6) + 1;
+    var colspan = (showConcession ? 7 : 6) + 2;
     body = '<tr class="empty-row"><td colspan="'+colspan+'">' + (query ? "Aucun véhicule ne correspond à « " + escapeHtml(query) + " »." : 'Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».') + '</td></tr>';
   } else {
-    filtered.forEach(function(v){
+    filtered.forEach(function(v, idx){
       var p = partnerById(v.partnerId);
       body += '<tr data-id="'+v.id+'">' +
+        '<td class="num-col">'+(idx+1)+'</td>' +
         (showConcession ? '<td>'+escapeHtml(p?p.distributeur:"—")+'</td>' : '') +
         '<td>'+escapeHtml(v.client)+'</td>' +
         '<td>'+escapeHtml(v.modele)+'</td>' +
