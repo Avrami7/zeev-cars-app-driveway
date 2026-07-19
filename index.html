@@ -197,6 +197,11 @@ main{padding:22px}
 .data-table td.actions{white-space:nowrap;text-align:right}
 .data-table td.chk{text-align:center;width:32px}
 .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:600}
+.pill-click{cursor:pointer}
+.pill-click:hover{filter:brightness(1.15);text-decoration:underline}
+.bulk-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel2);border:1px solid var(--accent);border-radius:8px;margin-bottom:10px;font-size:12.5px}
+.bulk-bar.hidden{display:none}
+.bulk-bar .bulk-count{color:var(--tx2);margin-right:auto}
 .pill.ok{background:rgba(22,163,74,.15);color:var(--ok)}
 .pill.warn{background:rgba(201,138,20,.15);color:var(--warn)}
 .pill.err{background:rgba(220,38,38,.15);color:var(--err)}
@@ -278,6 +283,20 @@ main{padding:22px}
 }
 @media (max-width:760px){
   main{padding:14px} .data-table{min-width:640px} .form-grid{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .data-table{min-width:0}
+  .data-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .data-table tbody tr{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:var(--panel)}
+  .data-table tbody tr.empty-row{display:block}
+  .data-table td{display:flex;justify-content:space-between;align-items:center;width:100%;padding:6px 2px;border:none !important;border-bottom:1px solid var(--line) !important}
+  .data-table td:last-child{border-bottom:none !important}
+  .data-table td::before{content:attr(data-label);font-size:10.5px;text-transform:uppercase;color:var(--tx3);font-weight:600;margin-right:10px;flex-shrink:0}
+  .data-table td.chk{width:auto;order:-1;padding-bottom:8px;border-bottom:1px solid var(--line) !important}
+  .data-table td.chk::before{content:none}
+  .data-table td.actions{justify-content:flex-end;gap:8px}
+  .data-table td.actions::before{content:none}
+  .bulk-bar{flex-wrap:wrap}
 }
 a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){ *{transition:none !important;animation:none !important} }
@@ -470,12 +489,12 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
     <div class="modal-body">
       <div class="modal-note">Sélectionnez les véhicules livrés à regrouper sur une seule facture. Document de travail destiné à votre outil de facturation — pas une facture légale émise automatiquement.</div>
       <div class="form-grid">
-        <div class="form-row"><label for="inv-number">N° de facture</label><input type="text" id="inv-number"></div>
+        <div class="form-row"><label for="inv-number">N° de facture</label><input type="text" id="inv-number"><div id="inv-number-warn" style="color:var(--err);font-size:11.5px;margin-top:3px"></div></div>
         <div class="form-row"><label for="inv-date">Date d'émission</label><input type="text" id="inv-date" placeholder="JJ/MM/AAAA"></div>
       </div>
       <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="text" id="inv-due" placeholder="JJ/MM/AAAA"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
       <div class="table-wrap"><table class="data-table" id="invoice-vehicle-table"></table></div>
-      <div class="invoice-total-bar"><span>Total sélectionné : <strong id="invoice-total">0,00 €</strong></span><button class="btn small" id="invoice-select-all">Tout sélectionner</button></div>
+      <div class="invoice-total-bar"><span>Total sélectionné : <strong id="invoice-total">0,00 €</strong><span id="invoice-commission-line"></span></span><button class="btn small" id="invoice-select-all">Tout sélectionner</button></div>
     </div>
     <div class="modal-foot"><button class="btn ghost" data-close="modal-invoice">Fermer</button><button class="btn primary" id="invoice-print-btn">Générer et imprimer la facture</button></div>
   </div>
@@ -730,7 +749,11 @@ function persistSession(token, user){
   state.sessionToken = token; state.user = user; state.scope = user.scope || (user.isOwner?"FULL":null);
   try { localStorage.setItem("zcd_session", token); localStorage.setItem("zcd_user", JSON.stringify(user)); } catch(e){}
 }
-function showLoginError(msg){ var e = $("#login-error"); e.textContent = msg; e.classList.add("show"); }
+function showLoginError(msg){
+  var e = $("#login-error");
+  e.innerHTML = escapeHtml(msg).replace(/(github\.com\/[a-zA-Z0-9-]+)/, '<a href="https://$1" target="_blank" rel="noopener">$1</a>');
+  e.classList.add("show");
+}
 function setLoginLoading(loading){
   var btn = $("#login-btn"), label = btn.querySelector(".btn-label"), spinner = btn.querySelector(".btn-spinner");
   btn.disabled = loading;
@@ -838,9 +861,9 @@ function kpiCard(label, value, sub, cls, id){
   return '<div class="kpi '+(cls||"")+'"><div class="k-label">'+label+'</div><div class="k-value"'+(id?' id="'+id+'"':'')+'>'+value+'</div>'+(sub?'<div class="k-sub"'+(id?' id="'+id+'-sub"':'')+'>'+sub+'</div>':'')+'</div>';
 }
 function statutPill(s){
-  if (s === "LIVRE") return '<span class="pill ok">Livré</span>';
-  if (s === "NON_LIVRE") return '<span class="pill err">Non livré</span>';
-  return '<span class="pill warn">Commandé</span>';
+  if (s === "LIVRE") return '<span class="pill ok pill-click" data-statut="LIVRE" title="Filtrer sur ce statut">Livré</span>';
+  if (s === "NON_LIVRE") return '<span class="pill err pill-click" data-statut="NON_LIVRE" title="Filtrer sur ce statut">Non livré</span>';
+  return '<span class="pill warn pill-click" data-statut="COMMANDE" title="Filtrer sur ce statut">Commandé</span>';
 }
 
 function computePartnerKpis(p){
@@ -922,6 +945,7 @@ function renderPartnerPanel(p, searchQuery){
 
   var html = '<section class="tab-panel active">' +
     '<div class="print-report-header"><h2>' + escapeHtml(p.distributeur) + '</h2><div class="print-report-date">Édité le ' + isoToFr(todayIso()) + '</div></div>' +
+    (full ? '' : '<div class="bandeau bandeau-warn">🔒 Compte à accès Livraison — les montants et commissions sont masqués. Contactez l\'administrateur pour un accès complet si besoin.</div>') +
     '<div class="bandeau bandeau-ok">Entité à facturer : <strong>' + escapeHtml(p.distributeur.toUpperCase()) + '</strong>' +
       (p.siren ? ' — SIREN ' + escapeHtml(p.siren) : '') + ' — SIRET ' + escapeHtml(p.siret) + '<br>' +
       escapeHtml(p.adresse) + ', ' + escapeHtml(p.cp) + ' ' + escapeHtml(p.ville) +
@@ -948,15 +972,26 @@ function renderPartnerPanel(p, searchQuery){
       (full ? kpiCard("Délai moyen de règlement", delaiMoyen != null ? (delaiMoyen + " j") : "—", delaiMoyen != null ? "sur factures impayées" : "aucune facture en retard", "", "kpi-delai-reglement") : lockedKpiCard("Délai moyen de règlement")) +
       (full ? kpiCard("Estimation annuelle", estimationAnnuelle != null ? fmtMoney(estimationAnnuelle) : fmtMoney(0), estimationSub, "", "kpi-estimation-annuelle") : lockedKpiCard("Estimation annuelle")) +
     '</div>' +
-    '<div class="veh-search-toolbar"><input type="text" id="veh-search-'+p.id+'" placeholder="Rechercher un véhicule (client, modèle, immatriculation...)" value="'+escapeAttr(searchQuery||"")+'"></div>' +
+    '<div class="veh-search-toolbar">' +
+      '<input type="text" id="veh-search-'+p.id+'" placeholder="Rechercher un véhicule (client, modèle, immatriculation...)" value="'+escapeAttr(searchQuery||"")+'">' +
+      '<select id="veh-filter-statut-'+p.id+'"><option value="">Tous statuts</option>' +
+        Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select>' +
+    '</div>' +
     '<div class="table-wrap"><table class="data-table" id="table-partner-'+p.id+'"></table></div>' +
   '</section>';
 
   $("#main-content").innerHTML = html;
-  renderVehicleTable("#table-partner-"+p.id, list, searchQuery);
   bindPanelActions();
   var searchInput = $("#veh-search-"+p.id);
-  searchInput.addEventListener("input", function(){ renderVehicleTable("#table-partner-"+p.id, vehiclesForPartner(p.id), searchInput.value); });
+  var statutSelect = $("#veh-filter-statut-"+p.id);
+  function refresh(){
+    var q = searchInput.value, sf = statutSelect.value;
+    var l = list.filter(function(v){ return !sf || v.statutLivraison === sf; });
+    renderVehicleTable("#table-partner-"+p.id, l, q, false, function(statut){ statutSelect.value = statut; refresh(); }, refresh);
+  }
+  searchInput.addEventListener("input", refresh);
+  statutSelect.addEventListener("change", refresh);
+  refresh();
 }
 
 const STATUT_PAIEMENT_LABELS = { A_VERIFIER:"À vérifier", IMPAYE:"Impayé", PAYE:"Payé" };
@@ -968,8 +1003,10 @@ function eligibiliteFacturation(v){
 }
 
 /* Tableau simplifie : 5 colonnes essentielles + acces "Details" pour le reste.
-   Recherche cote client sur client/modele/immatriculation. */
-function renderVehicleTable(sel, list, query, showConcession){
+   Recherche cote client sur client/modele/immatriculation.
+   onStatusClick(statut) : appele au clic sur une pastille, pour filtrage rapide.
+   refreshFn() : appele apres une action groupee pour redessiner la vue courante. */
+function renderVehicleTable(sel, list, query, showConcession, onStatusClick, refreshFn){
   var full = state.scope === "FULL";
   query = (query||"").trim().toLowerCase();
   var filtered = !query ? list : list.filter(function(v){
@@ -979,38 +1016,87 @@ function renderVehicleTable(sel, list, query, showConcession){
            (v.immatriculation||"").toLowerCase().indexOf(query)!==-1 ||
            (showConcession && p2 && p2.distributeur.toLowerCase().indexOf(query)!==-1);
   });
-  var head = "<thead><tr><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
+  var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
     (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
     (full ? "<th>Commission HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
     "<th></th></tr></thead>";
   var body = "";
   if (!filtered.length){
-    var colspan = (showConcession ? 7 : 6) + 2;
+    var colspan = (showConcession ? 7 : 6) + 3;
     body = '<tr class="empty-row"><td colspan="'+colspan+'">' + (query ? "Aucun véhicule ne correspond à « " + escapeHtml(query) + " »." : 'Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».') + '</td></tr>';
   } else {
     filtered.forEach(function(v, idx){
       var p = partnerById(v.partnerId);
       body += '<tr data-id="'+v.id+'">' +
-        '<td class="num-col">'+(idx+1)+'</td>' +
-        (showConcession ? '<td>'+escapeHtml(p?p.distributeur:"—")+'</td>' : '') +
-        '<td>'+escapeHtml(v.client)+'</td>' +
-        '<td>'+escapeHtml(v.modele)+'</td>' +
-        '<td>'+escapeHtml(v.immatriculation)+'</td>' +
-        '<td>'+statutPill(v.statutLivraison)+'</td>' +
-        (full ? '<td class="num">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td>' : '<td class="num lock-cell" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
-        (full ? '<td class="num">'+(commissionFor(v)!=null?fmtMoney(commissionFor(v)):"—")+'</td>' : '<td class="num lock-cell" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
+        '<td class="chk"><input type="checkbox" class="row-select" data-veh-id="'+v.id+'"></td>' +
+        '<td class="num-col" data-label="N°">'+(idx+1)+'</td>' +
+        (showConcession ? '<td data-label="Concession">'+escapeHtml(p?p.distributeur:"—")+'</td>' : '') +
+        '<td data-label="Client">'+escapeHtml(v.client)+'</td>' +
+        '<td data-label="Modèle">'+escapeHtml(v.modele)+'</td>' +
+        '<td data-label="Immatriculation">'+escapeHtml(v.immatriculation)+'</td>' +
+        '<td data-label="Statut">'+statutPill(v.statutLivraison)+'</td>' +
+        (full ? '<td class="num" data-label="Montant HT">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td>' : '<td class="num lock-cell" data-label="Montant HT" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
+        (full ? '<td class="num" data-label="Commission HT">'+(commissionFor(v)!=null?fmtMoney(commissionFor(v)):"—")+'</td>' : '<td class="num lock-cell" data-label="Commission HT" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
         '<td class="actions"><button class="btn small" data-details-vehicle="'+v.id+'">Détails</button> <button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td>' +
       '</tr>';
     });
   }
   var table = $(sel);
   table.innerHTML = head + "<tbody>" + body + "</tbody>";
+
+  // Barre d'actions groupees : creee/recreee juste avant le tableau a chaque rendu
+  var barId = sel.replace("#","") + "-bulkbar";
+  var oldBar = document.getElementById(barId);
+  if (oldBar) oldBar.remove();
+  var wrap = table.closest(".table-wrap") || table.parentElement;
+  wrap.insertAdjacentHTML("beforebegin",
+    '<div class="bulk-bar hidden" id="'+barId+'">' +
+      '<span class="bulk-count">0 sélectionné(s)</span>' +
+      '<button class="btn small" data-bulk="LIVRE">Marquer Livré</button>' +
+      '<button class="btn small" data-bulk="NON_LIVRE">Marquer Non livré</button>' +
+      '<button class="btn small" data-bulk="COMMANDE">Marquer Commandé</button>' +
+    '</div>'
+  );
+  var bar = document.getElementById(barId);
+
+  function selectedIds(){ return $all(sel+" .row-select:checked").map(function(c){ return c.dataset.vehId; }); }
+  function updateBar(){
+    var ids = selectedIds();
+    bar.classList.toggle("hidden", !ids.length);
+    bar.querySelector(".bulk-count").textContent = ids.length + " sélectionné(s)";
+  }
+  $all(sel+" .row-select").forEach(function(c){ c.addEventListener("change", updateBar); });
+  var selectAll = table.querySelector(".row-select-all");
+  selectAll.addEventListener("change", function(){
+    $all(sel+" .row-select").forEach(function(c){ c.checked = selectAll.checked; });
+    updateBar();
+  });
+  bar.querySelectorAll("[data-bulk]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var ids = selectedIds();
+      if (!ids.length) return;
+      var statut = btn.dataset.bulk;
+      ids.forEach(function(id){
+        var v = state.vehicles.find(function(x){ return x.id === id; });
+        if (v) v.statutLivraison = statut;
+      });
+      markDirty();
+      toast(ids.length + " véhicule(s) marqué(s) « " + STATUT_LABELS[statut] + " ».", "ok");
+      if (refreshFn) refreshFn(); else renderVehicleTable(sel, list, query, showConcession, onStatusClick, refreshFn);
+    });
+  });
+
   $all(sel+" [data-details-vehicle]").forEach(function(btn){
     btn.addEventListener("click", function(){ openVehicleDetailsModal(btn.dataset.detailsVehicle); });
   });
   $all(sel+" [data-del-vehicle]").forEach(function(btn){
     btn.addEventListener("click", function(){ deleteVehicleWithUndo(btn.dataset.delVehicle); });
   });
+  if (onStatusClick){
+    $all(sel+" .pill-click").forEach(function(el){
+      el.addEventListener("click", function(){ onStatusClick(el.dataset.statut); });
+    });
+  }
 }
 
 /* Suppression avec delai de grace : retrait immediat de l'affichage,
@@ -1064,7 +1150,8 @@ function renderAllVehiclesPanel(){
   var full = state.scope === "FULL";
   $("#main-content").innerHTML =
     '<section class="tab-panel active">' +
-      '<div class="bandeau bandeau-info">Vue consolidée de tous les véhicules suivis, tous partenaires confondus.</div>' +
+    (full ? '' : '<div class="bandeau bandeau-warn">🔒 Compte à accès Livraison — les montants et commissions sont masqués. Contactez l\'administrateur pour un accès complet si besoin.</div>') +
+    '<div class="bandeau bandeau-info">Vue consolidée de tous les véhicules suivis, tous partenaires confondus.</div>' +
       '<div class="kpi-row" id="kpi-all"></div>' +
       '<div class="toolbar"><select id="all-filter-partner"><option value="">Tous les partenaires</option>' +
         state.partners.map(function(p){ return '<option value="'+p.id+'">'+escapeHtml(p.distributeur)+'</option>'; }).join("") + '</select>' +
@@ -1076,7 +1163,7 @@ function renderAllVehiclesPanel(){
   function refresh(){
     var pf = $("#all-filter-partner").value, sf = $("#all-filter-statut").value, q = $("#all-veh-search").value;
     var list = state.vehicles.filter(function(v){ if (pf && v.partnerId!==pf) return false; if (sf && v.statutLivraison!==sf) return false; return true; });
-    renderVehicleTable("#table-all-vehicles", list, q, true);
+    renderVehicleTable("#table-all-vehicles", list, q, true, function(statut){ $("#all-filter-statut").value = statut; refresh(); }, refresh);
     var caHt = list.reduce(function(s,v){ return s+Number(v.montantHT||0); }, 0);
     var commission = full ? list.reduce(function(s,v){ var c=commissionFor(v); return s+(c||0); }, 0) : null;
     var livres = list.filter(function(v){ return v.statutLivraison==="LIVRE"; });
@@ -1394,24 +1481,52 @@ function checkMontantOutlier(vehicle, newMontant){
 /* =====================================================================
    MODALE — FACTURE CONSOLIDEE + IMPRESSION
    ===================================================================== */
+/* Suggere le prochain numero de facture en detectant le motif prefixe+numero
+   sur le plus grand numero deja utilise, tous vehicules confondus. */
+function suggestNextInvoiceNumber(){
+  var parsed = state.vehicles.map(function(v){ return v.numeroFacture; }).filter(Boolean).map(function(n){
+    var m = String(n).match(/^(.*?)(\d+)$/);
+    return m ? { prefix:m[1], num:parseInt(m[2],10), width:m[2].length } : null;
+  }).filter(Boolean);
+  if (!parsed.length) return "";
+  parsed.sort(function(a,b){ return b.num-a.num; });
+  var top = parsed[0];
+  return top.prefix + String(top.num+1).padStart(top.width, "0");
+}
+function isDuplicateInvoiceNumber(num){
+  return state.vehicles.some(function(v){ return v.numeroFacture && v.numeroFacture === num; });
+}
 function openInvoiceModal(partnerId){
   var p = partnerById(partnerId);
   $("#invoice-modal-partner-name").textContent = p ? p.distributeur : "—";
   $("#invoice-print-btn").dataset.partnerId = partnerId;
-  $("#inv-number").value = ""; $("#inv-date").value = isoToFr(todayIso()); $("#inv-due").value = isoToFr(addDaysIso(todayIso(), 15));
+  $("#inv-number").value = suggestNextInvoiceNumber(); $("#inv-date").value = isoToFr(todayIso()); $("#inv-due").value = isoToFr(addDaysIso(todayIso(), 15));
   var list = vehiclesForPartner(partnerId).filter(function(v){ return v.statutLivraison === "LIVRE"; });
   var head = "<thead><tr><th class='chk'></th><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead>";
   var body = list.length ? list.map(function(v){
-    return "<tr><td class='chk'><input type='checkbox' class='inv-chk' data-amount='"+(v.montantHT||0)+"' checked></td><td>"+escapeHtml(v.client)+"</td><td>"+escapeHtml(v.modele)+"</td><td>"+escapeHtml(v.immatriculation)+"</td><td class='num'>"+fmtMoney(v.montantHT)+"</td></tr>";
+    return "<tr><td class='chk'><input type='checkbox' class='inv-chk' data-amount='"+(v.montantHT||0)+"' data-veh-id='"+v.id+"' checked></td><td>"+escapeHtml(v.client)+"</td><td>"+escapeHtml(v.modele)+"</td><td>"+escapeHtml(v.immatriculation)+"</td><td class='num'>"+fmtMoney(v.montantHT)+"</td></tr>";
   }).join("") : "<tr class='empty-row'><td colspan='5'>Aucun véhicule livré pour cette concession pour le moment.</td></tr>";
   $("#invoice-vehicle-table").innerHTML = head + "<tbody>" + body + "</tbody>";
   $all("#invoice-vehicle-table .inv-chk").forEach(function(c){ c.addEventListener("change", updateInvoiceTotal); });
+  $("#inv-number").oninput = function(){
+    var warn = $("#inv-number-warn");
+    if (isDuplicateInvoiceNumber($("#inv-number").value.trim())) warn.textContent = "⚠ Ce numéro est déjà utilisé sur un autre véhicule.";
+    else warn.textContent = "";
+  };
   updateInvoiceTotal();
   openModal("modal-invoice");
 }
 function updateInvoiceTotal(){
   var total = $all("#invoice-vehicle-table .inv-chk:checked").reduce(function(s,c){ return s+parseFloat(c.dataset.amount||0); }, 0);
   $("#invoice-total").textContent = fmtMoney(total);
+  var partnerId = $("#invoice-print-btn").dataset.partnerId;
+  var p = partnerById(partnerId);
+  var line = $("#invoice-commission-line");
+  if (state.scope === "FULL" && p && p.commissionPct != null){
+    line.textContent = " — Commission estimée (" + fmtPct(p.commissionPct) + ") : " + fmtMoney(total * p.commissionPct / 100);
+  } else {
+    line.textContent = "";
+  }
 }
 async function printInvoice(){
   var partnerId = $("#invoice-print-btn").dataset.partnerId;
@@ -1419,6 +1534,10 @@ async function printInvoice(){
   var rows = $all("#invoice-vehicle-table tbody tr").filter(function(tr){ var c=tr.querySelector(".inv-chk"); return c && c.checked; });
   if (!rows.length){ toast("Sélectionnez au moins un véhicule à facturer.", "err"); return; }
   var number = $("#inv-number").value.trim() || "—", dateEm = $("#inv-date").value || isoToFr(todayIso()), dateEch = $("#inv-due").value || isoToFr(addDaysIso(frToIso(dateEm) || todayIso(), 15));
+  if (number !== "—" && isDuplicateInvoiceNumber(number)){
+    toast("Ce numéro de facture existe déjà sur un autre véhicule. Choisissez-en un autre.", "err");
+    return;
+  }
   var total = 0;
   var lines = rows.map(function(tr){
     var cells = tr.querySelectorAll("td");
@@ -1438,6 +1557,18 @@ async function printInvoice(){
       escapeHtml(pay.beneficiaire) + "<br>IBAN " + escapeHtml(pay.iban) + " — BIC " + escapeHtml(pay.bic) + "</p>";
   } catch(e){
     bankBlock = "<p style='margin-top:14px;color:#b00'>⚠ Coordonnées de paiement non configurées — à ajouter manuellement avant envoi.</p>";
+  }
+
+  // Tamponne le numero de facture sur chaque vehicule facture : previent la
+  // reutilisation du meme numero et alimente automatiquement le suivi de
+  // paiement (statutFacturation, dateFacture) deja utilise ailleurs dans l'app.
+  if (number !== "—"){
+    rows.forEach(function(tr){
+      var vehId = tr.querySelector(".inv-chk").dataset.vehId;
+      var v = state.vehicles.find(function(x){ return x.id === vehId; });
+      if (v){ v.numeroFacture = number; v.dateFacture = frToIso(dateEm); v.statutFacturation = "FACTURE"; }
+    });
+    markDirty();
   }
 
   $("#print-invoice-area").innerHTML =
