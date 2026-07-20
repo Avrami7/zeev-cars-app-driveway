@@ -1025,17 +1025,18 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
   var filtered = !query ? list : list.filter(function(v){
     var p2 = partnerById(v.partnerId);
     return (v.client||"").toLowerCase().indexOf(query)!==-1 ||
+           (v.conducteur||"").toLowerCase().indexOf(query)!==-1 ||
            (v.modele||"").toLowerCase().indexOf(query)!==-1 ||
            (v.immatriculation||"").toLowerCase().indexOf(query)!==-1 ||
            (showConcession && p2 && p2.distributeur.toLowerCase().indexOf(query)!==-1);
   });
-  var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
+  var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Conducteur</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
     (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
     (full ? "<th>Commission HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
     "<th></th></tr></thead>";
   var body = "";
   if (!filtered.length){
-    var colspan = (showConcession ? 7 : 6) + 3;
+    var colspan = (showConcession ? 7 : 6) + 4;
     body = '<tr class="empty-row"><td colspan="'+colspan+'">' + (query ? "Aucun véhicule ne correspond à « " + escapeHtml(query) + " »." : 'Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».') + '</td></tr>';
   } else {
     filtered.forEach(function(v, idx){
@@ -1045,6 +1046,7 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
         '<td class="num-col" data-label="N°">'+(idx+1)+'</td>' +
         (showConcession ? '<td data-label="Concession">'+escapeHtml(p?p.distributeur:"—")+'</td>' : '') +
         '<td data-label="Client">'+escapeHtml(v.client)+'</td>' +
+        '<td data-label="Conducteur">'+escapeHtml(v.conducteur||"—")+'</td>' +
         '<td data-label="Modèle">'+escapeHtml(v.modele)+'</td>' +
         '<td data-label="Immatriculation">'+escapeHtml(v.immatriculation)+'</td>' +
         '<td data-label="Statut">'+statutPill(v.statutLivraison)+'</td>' +
