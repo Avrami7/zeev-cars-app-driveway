@@ -138,17 +138,17 @@ input,select,textarea{font-family:inherit}
 
 .veh-search-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
 .veh-search-toolbar input{flex:1;min-width:200px;max-width:320px;padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:12.5px}
-.veh-search-toolbar select{
+.veh-search-toolbar select,.toolbar select{
   appearance:none;-webkit-appearance:none;-moz-appearance:none;
   padding:8px 34px 8px 12px;background:var(--panel);border:1.5px solid var(--accent);border-radius:7px;
   color:var(--accent);font-size:12.5px;font-weight:600;cursor:pointer;min-width:150px;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%233b6ef0'/></svg>");
   background-repeat:no-repeat;background-position:right 12px center;
 }
-.veh-search-toolbar select:hover{background-color:var(--bg2)}
-.veh-search-toolbar select:focus{outline:none;box-shadow:0 0 0 3px rgba(59,110,240,.25)}
-.veh-search-toolbar select option{background:var(--panel);color:var(--tx1)}
-[data-theme="light"] .veh-search-toolbar select{
+.veh-search-toolbar select:hover,.toolbar select:hover{background-color:var(--bg2)}
+.veh-search-toolbar select:focus,.toolbar select:focus{outline:none;box-shadow:0 0 0 3px rgba(59,110,240,.25)}
+.veh-search-toolbar select option,.toolbar select option{background:var(--panel);color:var(--tx1)}
+[data-theme="light"] .veh-search-toolbar select,[data-theme="light"] .toolbar select{
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M0 0l5 6 5-6z' fill='%231d4ed8'/></svg>");
 }
 .lock-cell{color:var(--tx3);cursor:help}
@@ -184,7 +184,7 @@ main{padding:22px}
 .kpi.warn .k-value{color:var(--warn)}
 
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
-.toolbar select,.toolbar input{padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:12.5px;min-width:160px}
+.toolbar input{padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:12.5px;min-width:160px}
 .btn{padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--tx1);font-size:12.5px;font-weight:500}
 .btn:hover{border-color:var(--accent)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
