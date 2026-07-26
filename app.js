@@ -10,7 +10,7 @@ const CONFIG = {
 };
 
 const STATUT_LABELS = { COMMANDE:"Commandé — en attente de livraison", LIVRE:"Livré", NON_LIVRE:"Non livré" };
-const state = { user:null, sessionToken:null, scope:null, partners:[], vehicles:[], meta:{}, dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[] };
+const state = { user:null, scope:null, partners:[], vehicles:[], meta:{}, dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[] };
 
 var $ = function(s){ return document.querySelector(s); };
 var $all = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -60,8 +60,7 @@ async function apiCall(path, opts){
   opts = opts || {};
   if (!isApiConfigured()) throw new Error("Configuration manquante : renseignez CONFIG.apiBase (voir DEPLOIEMENT.md).");
   var headers = { "Content-Type":"application/json" };
-  if (opts.auth !== false && state.sessionToken) headers["Authorization"] = "Bearer " + state.sessionToken;
-  var res = await fetch(CONFIG.apiBase + path, { method: opts.method||"GET", headers: headers, body: opts.body?JSON.stringify(opts.body):undefined });
+  var res = await fetch(CONFIG.apiBase + path, { method: opts.method||"GET", headers: headers, credentials: "include", body: opts.body?JSON.stringify(opts.body):undefined });
   var j = await res.json().catch(function(){ return {}; });
   if (!res.ok){
     var err = new Error(j.error || ("Erreur réseau (" + res.status + ")."));
@@ -70,14 +69,15 @@ async function apiCall(path, opts){
   }
   return j;
 }
-const apiLoginGithub = function(code, redirectUri){ return apiCall("/api/login-github", { method:"POST", body:{ code:code, redirectUri:redirectUri }, auth:false }); };
+const apiLoginGithub = function(code, redirectUri){ return apiCall("/api/login-github", { method:"POST", body:{ code:code, redirectUri:redirectUri } }); };
 const apiGetData = function(){ return apiCall("/api/data"); };
 const apiSaveData = function(payload){ return apiCall("/api/data", { method:"POST", body:payload }); };
 const apiGetCollaborators = function(){ return apiCall("/api/collaborators"); };
 const apiGetPaymentDetails = function(){ return apiCall("/api/payment-details"); };
+const apiLogout = function(){ return apiCall("/api/logout", { method:"POST" }); };
 async function apiExportCsv(){
   if (!isApiConfigured()) throw new Error("Configuration manquante : renseignez CONFIG.apiBase.");
-  var res = await fetch(CONFIG.apiBase + "/api/export", { headers:{ "Authorization":"Bearer " + state.sessionToken } });
+  var res = await fetch(CONFIG.apiBase + "/api/export", { credentials: "include" });
   if (!res.ok){ var e = await res.json().catch(function(){return {};}); throw new Error(e.error || ("Erreur réseau (" + res.status + ")." )); }
   var blob = await res.blob();
   var disposition = res.headers.get("Content-Disposition") || "";
@@ -223,8 +223,7 @@ async function handleGithubCallback(){
   return true;
 }
 function persistSession(token, user){
-  state.sessionToken = token; state.user = user; state.scope = user.scope || (user.isOwner?"FULL":null);
-  try { localStorage.setItem("zcd_session", token); localStorage.setItem("zcd_user", JSON.stringify(user)); } catch(e){}
+  state.user = user; state.scope = user.scope || (user.isOwner?"FULL":null);
 }
 function showLoginError(msg){
   var e = $("#login-error");
@@ -237,16 +236,30 @@ function setLoginLoading(loading){
   if (label) label.textContent = loading ? "Connexion…" : "Se connecter avec GitHub";
   if (spinner) spinner.classList.toggle("hidden", !loading);
 }
-function tryRestoreSession(){
-  var token = null, user = null;
-  try { token = localStorage.getItem("zcd_session"); user = JSON.parse(localStorage.getItem("zcd_user")||"null"); } catch(e){ return false; }
-  if (!token || !user) return false;
-  state.sessionToken = token; state.user = user; state.scope = user.scope;
-  return true;
+async function tryBootFromCookie(){
+  try {
+    var data = await apiGetData();
+    state.partners = data.partners || [];
+    state.vehicles = data.vehicles || [];
+    state.meta = data.meta || {};
+    state.deletedVehicleIds = [];
+    state.scope = data.scope || null;
+    if (data.user) state.user = data.user;
+    $("#auth-overlay").classList.add("hidden");
+    $("#app-screen").classList.remove("hidden");
+    renderUserBadge();
+    applyScopeVisibility();
+    state.activeTab = state.partners[0] ? state.partners[0].id : "all";
+    renderAll();
+    markClean();
+    return true;
+  } catch(e){
+    return false; // pas de cookie valide -> ecran de connexion normal, rien a signaler
+  }
 }
-function performLogout(silent){
+async function performLogout(silent){
   if (!silent && state.dirty && !confirm("Des modifications non enregistrées seront perdues. Se déconnecter quand même ?")) return;
-  try { localStorage.removeItem("zcd_session"); localStorage.removeItem("zcd_user"); } catch(e){}
+  try { await apiLogout(); } catch(e){}
   window.location.reload();
 }
 
@@ -1389,7 +1402,7 @@ window.addEventListener("beforeunload", function(e){ if (state.dirty){ e.prevent
   }
   var handled = await handleGithubCallback();
   if (!handled){
-    if (tryRestoreSession()) await bootApp();
+    await tryBootFromCookie();
   }
 })();
 
