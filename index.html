@@ -115,6 +115,9 @@ input,select,textarea{font-family:inherit}
 
 .form-section-title{font-family:var(--disp);font-weight:700;font-size:12.5px;color:var(--tx2);margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .form-section-title:first-child{margin-top:0}
+summary::-webkit-details-marker{display:none}
+details[open] summary::before{content:"▾ ";}
+summary::before{content:"▸ ";}
 
 .kpi.locked{opacity:.55}
 .kpi.locked .k-value{font-size:18px}
@@ -460,11 +463,16 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
       </div>
       <div class="form-row"><label for="vd-statut-source">Statut véhicule (source)</label><input type="text" id="vd-statut-source"></div>
 
-      <div class="form-section-title">③ Contrat</div>
-      <div class="form-grid">
-        <div class="form-row"><label for="vd-leasing">Société de leasing</label><input type="text" id="vd-leasing"></div>
-        <div class="form-row"><label for="vd-numcontrat">N° contrat / commande</label><input type="text" id="vd-numcontrat"></div>
-      </div>
+      <details id="vd-more-details">
+        <summary class="form-section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px">Détails complémentaires (contrat, remarques)</summary>
+        <div class="form-section-title">③ Contrat</div>
+        <div class="form-grid">
+          <div class="form-row"><label for="vd-leasing">Société de leasing</label><input type="text" id="vd-leasing"></div>
+          <div class="form-row"><label for="vd-numcontrat">N° contrat / commande</label><input type="text" id="vd-numcontrat"></div>
+        </div>
+        <div class="form-section-title">Remarques</div>
+        <div class="form-row"><textarea id="vd-remarques"></textarea></div>
+      </details>
 
       <div class="form-section-title" id="vd-financier-title">④ Financier <span style="font-weight:400;color:var(--tx3);">(accès complet uniquement)</span></div>
       <div id="vd-financier-fields">
@@ -483,9 +491,6 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
           <div class="form-row"><label for="vd-datefacture">Date facture</label><input type="date" id="vd-datefacture"></div>
         </div>
       </div>
-
-      <div class="form-section-title">Remarques</div>
-      <div class="form-row"><textarea id="vd-remarques"></textarea></div>
     </div>
     <div class="modal-foot">
       <button class="btn danger-o" id="vd-delete-btn" style="margin-right:auto;">🗑 Supprimer ce véhicule</button>
@@ -1447,6 +1452,7 @@ function openVehicleDetailsModal(vehicleId){
   $("#vd-leasing").value = v.societeLeasing || "";
   $("#vd-numcontrat").value = v.numeroContrat || "";
   $("#vd-remarques").value = v.remarques || "";
+  $("#vd-more-details").open = !!(v.societeLeasing || v.numeroContrat || v.remarques);
 
   $("#vd-financier-title").classList.toggle("hidden", !full);
   $("#vd-financier-fields").classList.toggle("hidden", !full);
