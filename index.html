@@ -415,8 +415,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
         </select>
       </div>
       <div class="form-grid">
-        <div class="form-row"><label for="v-date-prevue">Date livraison prévue</label><input type="text" id="v-date-prevue" placeholder="JJ/MM/AAAA"></div>
-        <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="text" id="v-date-effective" placeholder="JJ/MM/AAAA"></div>
+        <div class="form-row"><label for="v-date-prevue">Date livraison prévue</label><input type="date" id="v-date-prevue"></div>
+        <div class="form-row"><label for="v-date-effective">Date livraison effective</label><input type="date" id="v-date-effective"></div>
       </div>
       <div class="form-row"><label for="v-statut-source">Statut véhicule (source)</label><input type="text" id="v-statut-source" placeholder="ex : Vehicle On Order, Préparation - Résa..."></div>
 
@@ -455,8 +455,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
         </select>
       </div>
       <div class="form-grid">
-        <div class="form-row"><label for="vd-date-prevue">Date livraison prévue</label><input type="text" id="vd-date-prevue" placeholder="JJ/MM/AAAA"></div>
-        <div class="form-row"><label for="vd-date-effective">Date livraison effective</label><input type="text" id="vd-date-effective" placeholder="JJ/MM/AAAA"></div>
+        <div class="form-row"><label for="vd-date-prevue">Date livraison prévue</label><input type="date" id="vd-date-prevue"></div>
+        <div class="form-row"><label for="vd-date-effective">Date livraison effective</label><input type="date" id="vd-date-effective"></div>
       </div>
       <div class="form-row"><label for="vd-statut-source">Statut véhicule (source)</label><input type="text" id="vd-statut-source"></div>
 
@@ -469,7 +469,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
       <div class="form-section-title" id="vd-financier-title">④ Financier <span style="font-weight:400;color:var(--tx3);">(accès complet uniquement)</span></div>
       <div id="vd-financier-fields">
         <div class="form-grid">
-          <div class="form-row"><label for="vd-montant">Montant HT</label><input type="number" step="0.01" min="0" id="vd-montant"></div>
+          <div class="form-row"><label for="vd-montant">Montant HT</label><input type="number" step="0.01" min="0" id="vd-montant"><div id="vd-montant-suggestion" style="color:var(--tx3);font-size:11.5px;margin-top:3px"></div></div>
           <div class="form-row"><label for="vd-statut-paiement">Statut paiement</label>
             <select id="vd-statut-paiement">
               <option value="A_VERIFIER">À vérifier</option>
@@ -480,7 +480,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
         </div>
         <div class="form-grid">
           <div class="form-row"><label for="vd-numfacture">N° facture</label><input type="text" id="vd-numfacture"></div>
-          <div class="form-row"><label for="vd-datefacture">Date facture</label><input type="text" id="vd-datefacture" placeholder="JJ/MM/AAAA"></div>
+          <div class="form-row"><label for="vd-datefacture">Date facture</label><input type="date" id="vd-datefacture"></div>
         </div>
       </div>
 
@@ -503,9 +503,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
       <div class="modal-note">Sélectionnez les véhicules livrés à regrouper sur une seule facture. Document de travail destiné à votre outil de facturation — pas une facture légale émise automatiquement.</div>
       <div class="form-grid">
         <div class="form-row"><label for="inv-number">N° de facture</label><input type="text" id="inv-number"><div id="inv-number-warn" style="color:var(--err);font-size:11.5px;margin-top:3px"></div></div>
-        <div class="form-row"><label for="inv-date">Date d'émission</label><input type="text" id="inv-date" placeholder="JJ/MM/AAAA"></div>
+        <div class="form-row"><label for="inv-date">Date d'émission</label><input type="date" id="inv-date"></div>
       </div>
-      <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="text" id="inv-due" placeholder="JJ/MM/AAAA"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
+      <div class="form-row"><label for="inv-due">Date d'échéance</label><input type="date" id="inv-due"><span class="field-hint">Calculée automatiquement à +15 jours (Art.8) — modifiable.</span></div>
       <div class="table-wrap"><table class="data-table" id="invoice-vehicle-table"></table></div>
       <div class="invoice-total-bar"><span>Total sélectionné : <strong id="invoice-total">0,00 €</strong><span id="invoice-commission-line"></span></span><button class="btn small" id="invoice-select-all">Tout sélectionner</button></div>
     </div>
@@ -550,7 +550,7 @@ const CONFIG = {
 };
 
 const STATUT_LABELS = { COMMANDE:"Commandé — en attente de livraison", LIVRE:"Livré", NON_LIVRE:"Non livré" };
-const state = { user:null, sessionToken:null, scope:null, partners:[], vehicles:[], dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[] };
+const state = { user:null, sessionToken:null, scope:null, partners:[], vehicles:[], meta:{}, dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[] };
 
 var $ = function(s){ return document.querySelector(s); };
 var $all = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -603,7 +603,11 @@ async function apiCall(path, opts){
   if (opts.auth !== false && state.sessionToken) headers["Authorization"] = "Bearer " + state.sessionToken;
   var res = await fetch(CONFIG.apiBase + path, { method: opts.method||"GET", headers: headers, body: opts.body?JSON.stringify(opts.body):undefined });
   var j = await res.json().catch(function(){ return {}; });
-  if (!res.ok) throw new Error(j.error || ("Erreur réseau (" + res.status + ")."));
+  if (!res.ok){
+    var err = new Error(j.error || ("Erreur réseau (" + res.status + ")."));
+    err.status = res.status;
+    throw err;
+  }
   return j;
 }
 const apiLoginGithub = function(code, redirectUri){ return apiCall("/api/login-github", { method:"POST", body:{ code:code, redirectUri:redirectUri }, auth:false }); };
@@ -804,6 +808,7 @@ async function bootApp(){
     var data = await apiGetData();
     state.partners = data.partners || [];
     state.vehicles = data.vehicles || [];
+    state.meta = data.meta || {};
     state.deletedVehicleIds = [];
     state.scope = data.scope || state.scope;
     if (data.user) state.user = Object.assign({}, state.user, data.user);
@@ -1091,6 +1096,16 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
       var ids = selectedIds();
       if (!ids.length) return;
       var statut = btn.dataset.bulk;
+      if (statut === "LIVRE" && state.scope === "FULL"){
+        var missing = ids.filter(function(id){
+          var v = state.vehicles.find(function(x){ return x.id === id; });
+          return v && (v.montantHT == null);
+        });
+        if (missing.length){
+          toast(missing.length + " véhicule(s) sélectionné(s) n'ont pas de montant HT — impossible de les marquer « Livré » en masse. Renseignez le montant via « Détails » d'abord.", "err");
+          return;
+        }
+      }
       ids.forEach(function(id){
         var v = state.vehicles.find(function(x){ return x.id === id; });
         if (v) v.statutLivraison = statut;
@@ -1252,8 +1267,27 @@ function renderAdminPanel(){
     '</div>';
   }).join("");
 
+  var perimetreAlerts = state.partners.filter(function(p){
+    if (!p.commissionPct || !p.marquesAutorisees || !p.marquesAutorisees.length) return false;
+    var delivered = vehiclesForPartner(p.id).filter(function(v){ return v.statutLivraison === "LIVRE"; });
+    return !delivered.some(function(v){
+      var marque = (v.modele||"").trim().split(/\s+/)[0].toUpperCase();
+      return p.marquesAutorisees.indexOf(marque) !== -1;
+    });
+  }).map(function(p){
+    return escapeHtml(p.distributeur) + " — commission " + fmtPct(p.commissionPct) + " active sur " + escapeHtml(p.marquesAutorisees.join("/")) + ", mais aucun véhicule livré de cette marque.";
+  });
+
+  var auditLog = ((state.meta||{}).auditLog || []).slice().reverse().slice(0, 30);
+  var auditRows = auditLog.map(function(a){
+    return "<tr><td>"+isoToFr(a.date.slice(0,10))+" "+a.date.slice(11,16)+"</td><td>"+escapeHtml(a.user)+"</td><td>"+escapeHtml(a.client||"—")+"</td><td>"+escapeHtml(a.field)+"</td><td class='num'>"+(a.from==null?"—":escapeHtml(String(a.from)))+"</td><td class='num'>"+(a.to==null?"—":escapeHtml(String(a.to)))+"</td></tr>";
+  }).join("");
+
   $("#main-content").innerHTML = '<section class="tab-panel active">' +
     '<div class="bandeau bandeau-err">⚠ <strong>Zone d\'administration — accès restreint au compte propriétaire.</strong><br>Les modifications effectuées ici impactent directement l\'application pour tous les utilisateurs.</div>' +
+    (perimetreAlerts.length ? '<div class="bandeau bandeau-warn">⚠ <strong>Incohérence commission / marque livrée :</strong><br>' + perimetreAlerts.join("<br>") + '</div>' : '') +
+    '<div class="admin-section-title">Journal d\'audit — modifications financières (30 dernières)</div>' +
+    (auditRows ? '<div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Utilisateur</th><th>Client</th><th>Champ</th><th>Ancienne valeur</th><th>Nouvelle valeur</th></tr></thead><tbody>' + auditRows + '</tbody></table></div>' : '<span class="param-text">Aucune modification financière enregistrée pour le moment.</span>') +
     '<div class="admin-section-title">Concessions enregistrées</div>' +
     '<div class="admin-partner-list">' + (cards || '<span class="param-text">Aucune concession enregistrée.</span>') + '</div>' +
     '<div class="admin-section-title">Ajouter une nouvelle concession / fournisseur</div>' +
@@ -1383,7 +1417,7 @@ function submitVehicle(){
     client: client, conducteur: normalizeConducteurName($("#v-conducteur").value.trim()),
     modele: $("#v-modele").value.trim(), immatriculation: $("#v-immat").value.trim().toUpperCase(), vin: $("#v-vin").value.trim().toUpperCase(),
     statutLivraison: $("#v-statut").value,
-    dateLivraisonPrevue: frToIso($("#v-date-prevue").value), dateLivraisonEffective: frToIso($("#v-date-effective").value),
+    dateLivraisonPrevue: $("#v-date-prevue").value, dateLivraisonEffective: $("#v-date-effective").value,
     statutVehiculeSource: $("#v-statut-source").value.trim(), remarques: $("#v-remarques").value.trim(),
     montantHT: null, statutFacturation: "NON_FACTURE", statutPaiement: "A_VERIFIER", numeroFacture: "", dateFacture: ""
   });
@@ -1407,8 +1441,8 @@ function openVehicleDetailsModal(vehicleId){
   $("#vd-immat").value = v.immatriculation || "";
   $("#vd-vin").value = v.vin || "";
   $("#vd-statut").value = v.statutLivraison || "COMMANDE";
-  $("#vd-date-prevue").value = isoToFr(v.dateLivraisonPrevue);
-  $("#vd-date-effective").value = isoToFr(v.dateLivraisonEffective);
+  $("#vd-date-prevue").value = v.dateLivraisonPrevue || "";
+  $("#vd-date-effective").value = v.dateLivraisonEffective || "";
   $("#vd-statut-source").value = v.statutVehiculeSource || "";
   $("#vd-leasing").value = v.societeLeasing || "";
   $("#vd-numcontrat").value = v.numeroContrat || "";
@@ -1420,9 +1454,24 @@ function openVehicleDetailsModal(vehicleId){
     $("#vd-montant").value = v.montantHT != null ? v.montantHT : "";
     $("#vd-statut-paiement").value = v.statutPaiement || "A_VERIFIER";
     $("#vd-numfacture").value = v.numeroFacture || "";
-    $("#vd-datefacture").value = isoToFr(v.dateFacture);
+    $("#vd-datefacture").value = v.dateFacture || "";
+    updateMontantSuggestion(v.modele, vehicleId);
+    $("#vd-modele").oninput = function(){ updateMontantSuggestion($("#vd-modele").value, vehicleId); };
   }
   openModal("modal-vehicle-details");
+}
+/* Suggere un prix catalogue en moyennant les vehicules deja saisis pour un
+   modele strictement identique (hors le vehicule courant) -- aide a la
+   coherence de saisie sans jamais l'imposer. */
+function updateMontantSuggestion(modele, currentId){
+  var el = $("#vd-montant-suggestion");
+  if (!el) return;
+  var key = (modele||"").trim().toLowerCase();
+  if (!key){ el.textContent = ""; return; }
+  var matches = state.vehicles.filter(function(v){ return v.id !== currentId && (v.modele||"").trim().toLowerCase() === key && v.montantHT != null; });
+  if (!matches.length){ el.textContent = ""; return; }
+  var avg = matches.reduce(function(s,v){ return s+Number(v.montantHT); }, 0) / matches.length;
+  el.textContent = "Suggestion : " + fmtMoney(avg) + " (moyenne sur " + matches.length + " véhicule(s) identique(s))";
 }
 function saveVehicleDetails(){
   var id = $("#vd-save-btn").dataset.vehicleId;
@@ -1430,27 +1479,35 @@ function saveVehicleDetails(){
   if (!v) return;
   var client = $("#vd-client").value.trim();
   if (!client){ toast("Le champ Client est obligatoire.", "err"); return; }
+  var newStatut = $("#vd-statut").value;
+  var newMontant = null;
+  if (state.scope === "FULL"){
+    newMontant = parseFloat($("#vd-montant").value);
+    if (isNaN(newMontant)) newMontant = null;
+    if (newStatut === "LIVRE" && newMontant == null){
+      toast("Impossible de marquer « Livré » sans montant HT renseigné (nécessaire au calcul de la commission).", "err");
+      return;
+    }
+  }
   v.client = client;
   v.conducteur = normalizeConducteurName($("#vd-conducteur").value.trim());
   v.modele = $("#vd-modele").value.trim();
   v.immatriculation = $("#vd-immat").value.trim().toUpperCase();
   v.vin = $("#vd-vin").value.trim().toUpperCase();
-  v.statutLivraison = $("#vd-statut").value;
-  v.dateLivraisonPrevue = frToIso($("#vd-date-prevue").value);
-  v.dateLivraisonEffective = frToIso($("#vd-date-effective").value);
+  v.statutLivraison = newStatut;
+  v.dateLivraisonPrevue = $("#vd-date-prevue").value;
+  v.dateLivraisonEffective = $("#vd-date-effective").value;
   v.statutVehiculeSource = $("#vd-statut-source").value.trim();
   v.societeLeasing = $("#vd-leasing").value.trim();
   v.numeroContrat = $("#vd-numcontrat").value.trim();
   v.remarques = $("#vd-remarques").value.trim();
   var montantWarning = null;
   if (state.scope === "FULL"){
-    var newMontant = parseFloat($("#vd-montant").value);
-    if (isNaN(newMontant)) newMontant = null;
     if (newMontant != null) montantWarning = checkMontantOutlier(v, newMontant);
     v.montantHT = newMontant;
     v.statutPaiement = $("#vd-statut-paiement").value;
     v.numeroFacture = $("#vd-numfacture").value.trim();
-    v.dateFacture = frToIso($("#vd-datefacture").value);
+    v.dateFacture = $("#vd-datefacture").value;
   }
   markDirty();
   closeModal("modal-vehicle-details");
@@ -1515,7 +1572,7 @@ function openInvoiceModal(partnerId){
   var p = partnerById(partnerId);
   $("#invoice-modal-partner-name").textContent = p ? p.distributeur : "—";
   $("#invoice-print-btn").dataset.partnerId = partnerId;
-  $("#inv-number").value = suggestNextInvoiceNumber(); $("#inv-date").value = isoToFr(todayIso()); $("#inv-due").value = isoToFr(addDaysIso(todayIso(), 15));
+  $("#inv-number").value = suggestNextInvoiceNumber(); $("#inv-date").value = todayIso(); $("#inv-due").value = addDaysIso(todayIso(), 15);
   var list = vehiclesForPartner(partnerId).filter(function(v){ return v.statutLivraison === "LIVRE"; });
   var head = "<thead><tr><th class='chk'></th><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead>";
   var body = list.length ? list.map(function(v){
@@ -1548,7 +1605,7 @@ async function printInvoice(){
   var p = partnerById(partnerId);
   var rows = $all("#invoice-vehicle-table tbody tr").filter(function(tr){ var c=tr.querySelector(".inv-chk"); return c && c.checked; });
   if (!rows.length){ toast("Sélectionnez au moins un véhicule à facturer.", "err"); return; }
-  var number = $("#inv-number").value.trim() || "—", dateEm = $("#inv-date").value || isoToFr(todayIso()), dateEch = $("#inv-due").value || isoToFr(addDaysIso(frToIso(dateEm) || todayIso(), 15));
+  var number = $("#inv-number").value.trim() || "—", dateEm = isoToFr($("#inv-date").value) || isoToFr(todayIso()), dateEch = isoToFr($("#inv-due").value) || isoToFr(addDaysIso(frToIso(dateEm) || todayIso(), 15));
   if (number !== "—" && isDuplicateInvoiceNumber(number)){
     toast("Ce numéro de facture existe déjà sur un autre véhicule. Choisissez-en un autre.", "err");
     return;
@@ -1766,28 +1823,42 @@ function toggleTheme(){
   try { localStorage.setItem("zcd_theme", state.theme); } catch(e){}
 }
 
+function showConflictBanner(){
+  if (document.getElementById("conflict-banner")) return;
+  var el = document.createElement("div");
+  el.id = "conflict-banner";
+  el.className = "bandeau bandeau-err";
+  el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;display:flex;justify-content:center;align-items:center;gap:14px;padding:10px 16px;border-radius:0";
+  el.innerHTML = "⚠ Vos modifications ne sont plus synchronisées : quelqu'un d'autre a enregistré entre-temps. <button type='button' class='btn small' id='conflict-reload-btn'>Recharger</button>";
+  document.body.prepend(el);
+  document.getElementById("conflict-reload-btn").addEventListener("click", reloadAll);
+}
 async function saveAll(){
   $("#sync-status").textContent = "Enregistrement...";
   try {
-    await apiSaveData({ partners: state.partners, vehicles: state.vehicles, deletedVehicleIds: state.deletedVehicleIds });
+    var res = await apiSaveData({ partners: state.partners, vehicles: state.vehicles, deletedVehicleIds: state.deletedVehicleIds });
     state.deletedVehicleIds = [];
     markClean();
-    toast("Données enregistrées.", "ok");
+    if (res && res.warnings && res.warnings.length) toast("Enregistré. ⚠ " + res.warnings.join(" — "), "warn");
+    else toast("Données enregistrées.", "ok");
   } catch(e){
+    if (e.status === 409){ showConflictBanner(); return; }
     toast("Échec de l'enregistrement : " + e.message, "err");
     var s = $("#sync-status"); s.textContent = "Échec de l'enregistrement"; s.style.color = "var(--err)";
   }
 }
 async function autoSaveIfDirty(){
   if (!state.dirty) return;
+  if (document.getElementById("conflict-banner")) return; // en conflit : on arrete de retenter en boucle silencieusement
   try {
     await apiSaveData({ partners: state.partners, vehicles: state.vehicles, deletedVehicleIds: state.deletedVehicleIds });
     state.deletedVehicleIds = [];
     markClean();
     toast("Sauvegarde automatique effectuée.", "ok");
   } catch(e){
-    // Echec silencieux : on retentera au prochain cycle, l'utilisateur garde
-    // la main via le bouton "Enregistrer sur GitHub" en cas de souci persistant.
+    if (e.status === 409){ showConflictBanner(); return; }
+    // Autre echec (reseau...) : on retentera au prochain cycle, l'utilisateur
+    // garde la main via le bouton "Enregistrer sur GitHub" en cas de souci persistant.
   }
 }
 setInterval(autoSaveIfDirty, 60000);
