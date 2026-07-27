@@ -467,6 +467,7 @@ function renderPartnerPanel(p, searchQuery){
       '<input type="text" id="veh-search-'+p.id+'" placeholder="Rechercher un véhicule (client, modèle, immatriculation...)" value="'+escapeAttr(searchQuery||"")+'">' +
       '<select id="veh-filter-statut-'+p.id+'"><option value="">Tous statuts</option>' +
         Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select>' +
+      '<select id="veh-filter-loueur-'+p.id+'"><option value="">Tous loueurs</option><option value="Athlon">Athlon</option><option value="Arval">Arval</option><option value="Alphabet">Alphabet</option></select>' +
     '</div>' +
     '<div class="table-wrap"><table class="data-table" id="table-partner-'+p.id+'"></table></div>' +
   '</section>';
@@ -475,13 +476,15 @@ function renderPartnerPanel(p, searchQuery){
   bindPanelActions();
   var searchInput = $("#veh-search-"+p.id);
   var statutSelect = $("#veh-filter-statut-"+p.id);
+  var loueurSelect = $("#veh-filter-loueur-"+p.id);
   function refresh(){
-    var q = searchInput.value, sf = statutSelect.value;
-    var l = list.filter(function(v){ return !sf || v.statutLivraison === sf; });
+    var q = searchInput.value, sf = statutSelect.value, lf = loueurSelect.value;
+    var l = list.filter(function(v){ return (!sf || v.statutLivraison === sf) && (!lf || v.societeLeasing === lf); });
     renderVehicleTable("#table-partner-"+p.id, l, q, false, function(statut){ statutSelect.value = statut; refresh(); }, refresh);
   }
   searchInput.addEventListener("input", refresh);
   statutSelect.addEventListener("change", refresh);
+  loueurSelect.addEventListener("change", refresh);
   refresh();
 }
 
@@ -506,15 +509,16 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
            (v.conducteur||"").toLowerCase().indexOf(query)!==-1 ||
            (v.modele||"").toLowerCase().indexOf(query)!==-1 ||
            (v.immatriculation||"").toLowerCase().indexOf(query)!==-1 ||
+           (v.societeLeasing||"").toLowerCase().indexOf(query)!==-1 ||
            (showConcession && p2 && p2.distributeur.toLowerCase().indexOf(query)!==-1);
   });
-  var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Conducteur</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
+  var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Loueur</th><th>Conducteur</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
     (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
     (full ? "<th>Commission HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
     "<th></th></tr></thead>";
   var body = "";
   if (!filtered.length){
-    var colspan = (showConcession ? 7 : 6) + 4;
+    var colspan = (showConcession ? 7 : 6) + 5;
     body = '<tr class="empty-row"><td colspan="'+colspan+'">' + (query ? "Aucun véhicule ne correspond à « " + escapeHtml(query) + " »." : 'Aucun véhicule pour cette concession — cliquez sur « Ajouter un véhicule ».') + '</td></tr>';
   } else {
     filtered.forEach(function(v, idx){
@@ -524,6 +528,7 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
         '<td class="num-col" data-label="N°">'+(idx+1)+'</td>' +
         (showConcession ? '<td data-label="Concession">'+escapeHtml(p?p.distributeur:"—")+'</td>' : '') +
         '<td data-label="Client">'+escapeHtml(v.client)+'</td>' +
+        '<td data-label="Loueur">'+escapeHtml(v.societeLeasing||"—")+'</td>' +
         '<td data-label="Conducteur">'+escapeHtml(v.conducteur||"—")+'</td>' +
         '<td data-label="Modèle">'+escapeHtml(v.modele)+'</td>' +
         '<td data-label="Immatriculation">'+escapeHtml(v.immatriculation)+'</td>' +
@@ -659,13 +664,14 @@ function renderAllVehiclesPanel(){
       '<div class="toolbar"><select id="all-filter-partner"><option value="">Tous les partenaires</option>' +
         state.partners.map(function(p){ return '<option value="'+p.id+'">'+escapeHtml(p.distributeur)+'</option>'; }).join("") + '</select>' +
         '<select id="all-filter-statut"><option value="">Tous statuts</option>' +
-        Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select></div>' +
+        Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select>' +
+        '<select id="all-filter-loueur"><option value="">Tous loueurs</option><option value="Athlon">Athlon</option><option value="Arval">Arval</option><option value="Alphabet">Alphabet</option></select></div>' +
       '<div class="veh-search-toolbar"><input type="text" id="all-veh-search" placeholder="Rechercher (client, modèle, immatriculation, concession...)"></div>' +
       '<div class="table-wrap"><table class="data-table" id="table-all-vehicles"></table></div>' +
     '</section>';
   function refresh(){
-    var pf = $("#all-filter-partner").value, sf = $("#all-filter-statut").value, q = $("#all-veh-search").value;
-    var list = state.vehicles.filter(function(v){ if (pf && v.partnerId!==pf) return false; if (sf && v.statutLivraison!==sf) return false; return true; });
+    var pf = $("#all-filter-partner").value, sf = $("#all-filter-statut").value, lf = $("#all-filter-loueur").value, q = $("#all-veh-search").value;
+    var list = state.vehicles.filter(function(v){ if (pf && v.partnerId!==pf) return false; if (sf && v.statutLivraison!==sf) return false; if (lf && v.societeLeasing!==lf) return false; return true; });
     renderVehicleTable("#table-all-vehicles", list, q, true, function(statut){ $("#all-filter-statut").value = statut; refresh(); }, refresh);
     var caHt = list.reduce(function(s,v){ return s+Number(v.montantHT||0); }, 0);
     var commission = full ? list.reduce(function(s,v){ var c=commissionFor(v); return s+(c||0); }, 0) : null;
@@ -676,6 +682,7 @@ function renderAllVehiclesPanel(){
   }
   $("#all-filter-partner").addEventListener("change", refresh);
   $("#all-filter-statut").addEventListener("change", refresh);
+  $("#all-filter-loueur").addEventListener("change", refresh);
   $("#all-veh-search").addEventListener("input", refresh);
   refresh();
 }
