@@ -10,7 +10,7 @@ const CONFIG = {
 };
 
 const STATUT_LABELS = { COMMANDE:"Commandé — en attente de livraison", LIVRE:"Livré", NON_LIVRE:"Non livré" };
-const state = { user:null, scope:null, partners:[], vehicles:[], meta:{}, dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[] };
+const state = { user:null, scope:null, partners:[], vehicles:[], meta:{}, dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[], columnFilters:{ statut:null, loueur:null, concession:null } };
 
 var $ = function(s){ return document.querySelector(s); };
 var $all = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -351,6 +351,64 @@ function renderNavTabs(){
 function kpiCard(label, value, sub, cls, id){
   return '<div class="kpi '+(cls||"")+'"><div class="k-label">'+label+'</div><div class="k-value"'+(id?' id="'+id+'"':'')+'>'+value+'</div>'+(sub?'<div class="k-sub"'+(id?' id="'+id+'-sub"':'')+'>'+sub+'</div>':'')+'</div>';
 }
+/* Filtres par colonne façon Excel : bouton dans l'en-tete + popover a cases a
+   cocher. state.columnFilters[col] contient l'ensemble des valeurs EXCLUES
+   (null/absent = aucune exclusion = tout affiche), pour rester coherent avec
+   le comportement Excel ou tout est coche par defaut. */
+function colFilterBtn(col){
+  var active = state.columnFilters[col] && state.columnFilters[col].size > 0;
+  return '<button type="button" class="col-filter-btn'+(active?' active':'')+'" data-colfilter="'+col+'" title="Filtrer cette colonne">▾</button>';
+}
+function closeColumnFilterPopover(){
+  var p = document.getElementById("col-filter-popover");
+  if (p) p.remove();
+  document.removeEventListener("click", handleOutsideClickForColFilter, true);
+}
+function handleOutsideClickForColFilter(e){
+  var p = document.getElementById("col-filter-popover");
+  if (p && !p.contains(e.target)) closeColumnFilterPopover();
+}
+function openColumnFilterPopover(btn, col, entries, onApply){
+  closeColumnFilterPopover();
+  var seen = {}, uniq = [];
+  entries.forEach(function(e){ if (!seen[e.value]){ seen[e.value]=true; uniq.push(e); } });
+  uniq.sort(function(a,b){ return String(a.label).localeCompare(String(b.label)); });
+  var excluded = state.columnFilters[col] || new Set();
+  var pop = document.createElement("div");
+  pop.className = "col-filter-popover";
+  pop.id = "col-filter-popover";
+  pop.innerHTML =
+    '<div class="cfp-actions"><button type="button" data-act="all">Tout</button><button type="button" data-act="none">Aucun</button><button type="button" class="cfp-close" data-act="close">✕</button></div>' +
+    '<div class="cfp-list">' + uniq.map(function(e){
+      var checked = !excluded.has(e.value);
+      return '<label class="cfp-item"><input type="checkbox" value="'+escapeAttr(e.value)+'" '+(checked?'checked':'')+'> '+escapeHtml(String(e.label))+'</label>';
+    }).join('') + '</div>';
+  document.body.appendChild(pop);
+  var rect = btn.getBoundingClientRect();
+  pop.style.top = (rect.bottom + window.scrollY + 4) + "px";
+  pop.style.left = (rect.left + window.scrollX) + "px";
+  requestAnimationFrame(function(){
+    var pr = pop.getBoundingClientRect();
+    if (pr.right > window.innerWidth - 8) pop.style.left = Math.max(8, window.innerWidth - pr.width - 8) + "px";
+  });
+  function applyFromCheckboxes(){
+    var newExcluded = new Set();
+    pop.querySelectorAll("input[type=checkbox]").forEach(function(cb){ if (!cb.checked) newExcluded.add(cb.value); });
+    state.columnFilters[col] = newExcluded.size ? newExcluded : null;
+    onApply();
+  }
+  pop.querySelectorAll("input[type=checkbox]").forEach(function(cb){ cb.addEventListener("change", applyFromCheckboxes); });
+  pop.querySelector('[data-act="all"]').addEventListener("click", function(){
+    pop.querySelectorAll("input[type=checkbox]").forEach(function(cb){ cb.checked = true; });
+    applyFromCheckboxes();
+  });
+  pop.querySelector('[data-act="none"]').addEventListener("click", function(){
+    pop.querySelectorAll("input[type=checkbox]").forEach(function(cb){ cb.checked = false; });
+    applyFromCheckboxes();
+  });
+  pop.querySelector('[data-act="close"]').addEventListener("click", closeColumnFilterPopover);
+  setTimeout(function(){ document.addEventListener("click", handleOutsideClickForColFilter, true); }, 0);
+}
 function statutPill(s){
   if (s === "LIVRE") return '<span class="pill ok pill-click" data-statut="LIVRE" title="Filtrer sur ce statut">Livré</span>';
   if (s === "NON_LIVRE") return '<span class="pill err pill-click" data-statut="NON_LIVRE" title="Filtrer sur ce statut">Non livré</span>';
@@ -465,9 +523,6 @@ function renderPartnerPanel(p, searchQuery){
     '</div>' +
     '<div class="veh-search-toolbar">' +
       '<input type="text" id="veh-search-'+p.id+'" placeholder="Rechercher un véhicule (client, modèle, immatriculation...)" value="'+escapeAttr(searchQuery||"")+'">' +
-      '<select id="veh-filter-statut-'+p.id+'"><option value="">Tous statuts</option>' +
-        Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select>' +
-      '<select id="veh-filter-loueur-'+p.id+'"><option value="">Tous loueurs</option><option value="Athlon">Athlon</option><option value="Arval">Arval</option><option value="Alphabet">Alphabet</option></select>' +
     '</div>' +
     '<div class="table-wrap"><table class="data-table" id="table-partner-'+p.id+'"></table></div>' +
   '</section>';
@@ -475,16 +530,14 @@ function renderPartnerPanel(p, searchQuery){
   $("#main-content").innerHTML = html;
   bindPanelActions();
   var searchInput = $("#veh-search-"+p.id);
-  var statutSelect = $("#veh-filter-statut-"+p.id);
-  var loueurSelect = $("#veh-filter-loueur-"+p.id);
   function refresh(){
-    var q = searchInput.value, sf = statutSelect.value, lf = loueurSelect.value;
-    var l = list.filter(function(v){ return (!sf || v.statutLivraison === sf) && (!lf || v.societeLeasing === lf); });
-    renderVehicleTable("#table-partner-"+p.id, l, q, false, function(statut){ statutSelect.value = statut; refresh(); }, refresh);
+    renderVehicleTable("#table-partner-"+p.id, list, searchInput.value, false, function(statut){
+      var autres = ["COMMANDE","LIVRE","NON_LIVRE"].filter(function(s){ return s!==statut; });
+      state.columnFilters.statut = new Set(autres);
+      refresh();
+    }, refresh);
   }
   searchInput.addEventListener("input", refresh);
-  statutSelect.addEventListener("change", refresh);
-  loueurSelect.addEventListener("change", refresh);
   refresh();
 }
 
@@ -503,7 +556,13 @@ function eligibiliteFacturation(v){
 function renderVehicleTable(sel, list, query, showConcession, onStatusClick, refreshFn){
   var full = state.scope === "FULL";
   query = (query||"").trim().toLowerCase();
-  var filtered = !query ? list : list.filter(function(v){
+  var colFiltered = list.filter(function(v){
+    if (state.columnFilters.statut && state.columnFilters.statut.has(v.statutLivraison)) return false;
+    if (state.columnFilters.loueur && state.columnFilters.loueur.has(v.societeLeasing||"")) return false;
+    if (showConcession && state.columnFilters.concession && state.columnFilters.concession.has(v.partnerId)) return false;
+    return true;
+  });
+  var filtered = !query ? colFiltered : colFiltered.filter(function(v){
     var p2 = partnerById(v.partnerId);
     return (v.client||"").toLowerCase().indexOf(query)!==-1 ||
            (v.conducteur||"").toLowerCase().indexOf(query)!==-1 ||
@@ -512,7 +571,9 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
            (v.societeLeasing||"").toLowerCase().indexOf(query)!==-1 ||
            (showConcession && p2 && p2.distributeur.toLowerCase().indexOf(query)!==-1);
   });
-  var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" + (showConcession ? "<th>Concession</th>" : "") + "<th>Client</th><th>Loueur</th><th>Conducteur</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison</th>" +
+  var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" +
+    (showConcession ? "<th>Concession "+colFilterBtn("concession")+"</th>" : "") +
+    "<th>Client</th><th>Loueur "+colFilterBtn("loueur")+"</th><th>Conducteur</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison "+colFilterBtn("statut")+"</th>" +
     (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
     (full ? "<th>Commission HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
     "<th></th></tr></thead>";
@@ -605,6 +666,17 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
       el.addEventListener("click", function(){ onStatusClick(el.dataset.statut); });
     });
   }
+  var applyFn = refreshFn || function(){ renderVehicleTable(sel, list, query, showConcession, onStatusClick, refreshFn); };
+  $all(sel+" [data-colfilter]").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var col = btn.dataset.colfilter, entries;
+      if (col === "statut") entries = list.map(function(v){ return { value: v.statutLivraison, label: STATUT_LABELS[v.statutLivraison] || v.statutLivraison }; });
+      else if (col === "loueur") entries = list.map(function(v){ return { value: v.societeLeasing||"", label: v.societeLeasing||"(vide)" }; });
+      else if (col === "concession") entries = list.map(function(v){ var p=partnerById(v.partnerId); return { value: v.partnerId, label: p?p.distributeur:"—" }; });
+      openColumnFilterPopover(btn, col, entries, applyFn);
+    });
+  });
 }
 
 /* Suppression avec delai de grace : retrait immediat de l'affichage,
@@ -661,18 +733,22 @@ function renderAllVehiclesPanel(){
     (full ? '' : '<div class="bandeau bandeau-warn">🔒 Compte à accès Livraison — les montants et commissions sont masqués. Contactez l\'administrateur pour un accès complet si besoin.</div>') +
     '<div class="bandeau bandeau-info">Vue consolidée de tous les véhicules suivis, tous partenaires confondus.</div>' +
       '<div class="kpi-row" id="kpi-all"></div>' +
-      '<div class="toolbar"><select id="all-filter-partner"><option value="">Tous les partenaires</option>' +
-        state.partners.map(function(p){ return '<option value="'+p.id+'">'+escapeHtml(p.distributeur)+'</option>'; }).join("") + '</select>' +
-        '<select id="all-filter-statut"><option value="">Tous statuts</option>' +
-        Object.keys(STATUT_LABELS).map(function(k){ return '<option value="'+k+'">'+STATUT_LABELS[k]+'</option>'; }).join("") + '</select>' +
-        '<select id="all-filter-loueur"><option value="">Tous loueurs</option><option value="Athlon">Athlon</option><option value="Arval">Arval</option><option value="Alphabet">Alphabet</option></select></div>' +
       '<div class="veh-search-toolbar"><input type="text" id="all-veh-search" placeholder="Rechercher (client, modèle, immatriculation, concession...)"></div>' +
       '<div class="table-wrap"><table class="data-table" id="table-all-vehicles"></table></div>' +
     '</section>';
   function refresh(){
-    var pf = $("#all-filter-partner").value, sf = $("#all-filter-statut").value, lf = $("#all-filter-loueur").value, q = $("#all-veh-search").value;
-    var list = state.vehicles.filter(function(v){ if (pf && v.partnerId!==pf) return false; if (sf && v.statutLivraison!==sf) return false; if (lf && v.societeLeasing!==lf) return false; return true; });
-    renderVehicleTable("#table-all-vehicles", list, q, true, function(statut){ $("#all-filter-statut").value = statut; refresh(); }, refresh);
+    var q = $("#all-veh-search").value;
+    var list = state.vehicles.filter(function(v){
+      if (state.columnFilters.statut && state.columnFilters.statut.has(v.statutLivraison)) return false;
+      if (state.columnFilters.loueur && state.columnFilters.loueur.has(v.societeLeasing||"")) return false;
+      if (state.columnFilters.concession && state.columnFilters.concession.has(v.partnerId)) return false;
+      return true;
+    });
+    renderVehicleTable("#table-all-vehicles", list, q, true, function(statut){
+      var autres = ["COMMANDE","LIVRE","NON_LIVRE"].filter(function(s){ return s!==statut; });
+      state.columnFilters.statut = new Set(autres);
+      refresh();
+    }, refresh);
     var caHt = list.reduce(function(s,v){ return s+Number(v.montantHT||0); }, 0);
     var commission = full ? list.reduce(function(s,v){ var c=commissionFor(v); return s+(c||0); }, 0) : null;
     var livres = list.filter(function(v){ return v.statutLivraison==="LIVRE"; });
@@ -680,9 +756,6 @@ function renderAllVehiclesPanel(){
       (full ? kpiCard("CA HT total", fmtMoney(caHt), "", "") + kpiCard("Commission réseau due", fmtMoney(commission), "", "warn") : lockedKpiCard("CA HT total") + lockedKpiCard("Commission réseau due")) +
       kpiCard("Véhicules livrés", livres.length, "sur "+list.length, "ok");
   }
-  $("#all-filter-partner").addEventListener("change", refresh);
-  $("#all-filter-statut").addEventListener("change", refresh);
-  $("#all-filter-loueur").addEventListener("change", refresh);
   $("#all-veh-search").addEventListener("input", refresh);
   refresh();
 }
