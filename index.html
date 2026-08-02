@@ -51,15 +51,22 @@ html,body{height:100%}
   filter:blur(80px);
   animation:glowDrift 26s ease-in-out infinite alternate;
 }
+.grain-overlay{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.03;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
 @keyframes glowDrift{
   0%{transform:translate(0,0) scale(1)}
   50%{transform:translate(-2%,1.5%) scale(1.04)}
   100%{transform:translate(2%,-1%) scale(1.02)}
 }
-#auth-overlay,#app-screen{position:relative;z-index:1}
+@keyframes modalPop{
+  from{opacity:0;transform:translateY(10px) scale(.97)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.modal-box{animation:modalPop .28s cubic-bezier(.16,1,.3,1)}
+#auth-overlay,#app-screen{position:relative;z-index:3}
 ::-webkit-scrollbar{width:12px;height:12px}
 ::-webkit-scrollbar-track{background:var(--bg2)}
-::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+::-webkit-scrollbar-thumb{background:linear-gradient(160deg, var(--accent2), var(--accent));border-radius:10px;border:2px solid transparent;background-clip:padding-box}
 html{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:thin}
 body{margin:0;background:var(--bg);color:var(--tx1);font-family:var(--mono);font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased;transition:background .2s ease,color .2s ease}
 .hidden{display:none !important}
@@ -100,7 +107,7 @@ input,select,textarea{font-family:inherit}
 .topbar{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:8px;padding:8px 14px;background:var(--glass-bg-strong);backdrop-filter:blur(28px) saturate(190%);-webkit-backdrop-filter:blur(28px) saturate(190%);border-bottom:1px solid var(--glass-border);position:sticky;top:0;z-index:20;overflow-x:auto}
 .topbar::-webkit-scrollbar{height:8px}
 .topbar::-webkit-scrollbar-track{background:var(--bg2)}
-.topbar::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.topbar::-webkit-scrollbar-thumb{background:linear-gradient(160deg, var(--accent2), var(--accent));border-radius:10px;border:2px solid transparent;background-clip:padding-box}
 .topbar{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:thin}
 .tb-left{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .tb-brand{font-family:var(--disp);font-weight:700;font-size:19px}
@@ -126,7 +133,7 @@ input,select,textarea{font-family:inherit}
 .nav{display:flex;gap:2px;padding:0 22px;background:var(--glass-bg);backdrop-filter:blur(24px) saturate(175%);-webkit-backdrop-filter:blur(24px) saturate(175%);border-bottom:1px solid var(--glass-border);overflow-x:auto}
 .nav::-webkit-scrollbar{height:14px}
 .nav::-webkit-scrollbar-track{background:var(--bg2)}
-.nav::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.nav::-webkit-scrollbar-thumb{background:linear-gradient(160deg, var(--accent2), var(--accent));border-radius:10px;border:2px solid transparent;background-clip:padding-box}
 .nav{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:auto}
 .ntab{padding:13px 16px;background:transparent;border:none;color:var(--tx2);font-size:12.5px;font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis}
 .ntab:hover{color:var(--tx1)}
@@ -212,18 +219,18 @@ main{padding:22px}
 
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .toolbar input{padding:8px 11px;background:var(--panel);border:1px solid var(--line);border-radius:7px;color:var(--tx1);font-size:12.5px;min-width:160px}
-.btn{padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--tx1);font-size:12.5px;font-weight:500}
-.btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.ghost{background:transparent}
+.btn{padding:8px 14px;border-radius:9px;border:1px solid var(--glass-border);background:var(--glass-bg);backdrop-filter:blur(14px) saturate(170%);-webkit-backdrop-filter:blur(14px) saturate(170%);color:var(--tx1);font-size:12.5px;font-weight:500;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.btn:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.btn.primary{background:linear-gradient(160deg, var(--accent2), var(--accent));border-color:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(59,110,240,.35)}
+.btn.ghost{background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
 .btn.danger-o{color:var(--err);border-color:rgba(220,38,38,.4)}
 .btn.small{padding:5px 10px;font-size:11px}
-.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none !important}
 
 .table-wrap{background:var(--glass-bg-strong);backdrop-filter:blur(24px) saturate(175%);-webkit-backdrop-filter:blur(24px) saturate(175%);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow);border-radius:16px;overflow-x:auto}
 .table-wrap::-webkit-scrollbar{height:14px}
 .table-wrap::-webkit-scrollbar-track{background:var(--bg2);border-radius:8px}
-.table-wrap::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.table-wrap::-webkit-scrollbar-thumb{background:linear-gradient(160deg, var(--accent2), var(--accent));border-radius:10px;border:2px solid transparent;background-clip:padding-box}
 .table-wrap{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:auto}
 .data-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px}
 .data-table thead th{text-align:left;padding:11px 14px;background:var(--glass-bg-strong);backdrop-filter:blur(20px) saturate(170%);-webkit-backdrop-filter:blur(20px) saturate(170%);color:var(--tx3);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--glass-border);white-space:nowrap;position:sticky;top:0}
@@ -272,7 +279,7 @@ main{padding:22px}
 .modal-body{max-height:80vh;overflow-y:auto}
 .modal-body::-webkit-scrollbar{width:10px}
 .modal-body::-webkit-scrollbar-track{background:var(--bg2)}
-.modal-body::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px}
+.modal-body::-webkit-scrollbar-thumb{background:linear-gradient(160deg, var(--accent2), var(--accent));border-radius:10px;border:2px solid transparent;background-clip:padding-box}
 .modal-body{scrollbar-color:var(--accent) var(--bg2);scrollbar-width:thin}
 .form-row{margin-bottom:13px}
 .form-row label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tx3);margin-bottom:6px}
@@ -357,6 +364,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{ou
 </head>
 <body>
 <div class="bg-glow" aria-hidden="true"></div>
+<div class="grain-overlay" aria-hidden="true"></div>
 <a href="#main-content" class="skip-link">Aller au contenu principal</a>
 
 <div id="auth-overlay">
