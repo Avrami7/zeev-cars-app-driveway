@@ -317,6 +317,7 @@ function applyScopeVisibility(){
 function partnerById(id){ for (var i=0;i<state.partners.length;i++) if (state.partners[i].id===id) return state.partners[i]; return null; }
 function vehiclesForPartner(id){ return state.vehicles.filter(function(v){ return v.partnerId===id; }); }
 function commissionFor(v){
+  if (v.societeLeasing === "Arval") return null; // Arval ne remet aucune commission
   var p = partnerById(v.partnerId);
   if (!p || p.commissionPct == null || v.montantHT == null) return null;
   return Number(v.montantHT||0) * Number(p.commissionPct||0) / 100;
@@ -595,7 +596,7 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
         '<td data-label="Immatriculation">'+escapeHtml(v.immatriculation)+'</td>' +
         '<td data-label="Statut">'+statutPill(v.statutLivraison)+'</td>' +
         (full ? '<td class="num" data-label="Montant HT">'+(v.montantHT!=null?fmtMoney(v.montantHT):"—")+'</td>' : '<td class="num lock-cell" data-label="Montant HT" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
-        (full ? '<td class="num" data-label="Commission HT">'+(commissionFor(v)!=null?fmtMoney(commissionFor(v)):"—")+'</td>' : '<td class="num lock-cell" data-label="Commission HT" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
+        (full ? '<td class="num" data-label="Commission HT">'+(v.societeLeasing==="Arval" ? '<span class="pill warn" title="Arval ne remet aucune commission sur ce véhicule">Pas de commission Arval</span>' : (commissionFor(v)!=null?fmtMoney(commissionFor(v)):"—"))+'</td>' : '<td class="num lock-cell" data-label="Commission HT" title="Visible uniquement pour les comptes Facturation complète">🔒</td>') +
         '<td class="actions"><button class="btn small" data-details-vehicle="'+v.id+'">Détails</button> <button class="btn small danger-o" data-del-vehicle="'+v.id+'">Supprimer</button></td>' +
       '</tr>';
     });
@@ -1143,13 +1144,24 @@ function openInvoiceModal(partnerId){
   openModal("modal-invoice");
 }
 function updateInvoiceTotal(){
-  var total = $all("#invoice-vehicle-table .inv-chk:checked").reduce(function(s,c){ return s+parseFloat(c.dataset.amount||0); }, 0);
+  var checked = $all("#invoice-vehicle-table .inv-chk:checked");
+  var total = checked.reduce(function(s,c){ return s+parseFloat(c.dataset.amount||0); }, 0);
   $("#invoice-total").textContent = fmtMoney(total);
   var partnerId = $("#invoice-print-btn").dataset.partnerId;
   var p = partnerById(partnerId);
   var line = $("#invoice-commission-line");
   if (state.scope === "FULL" && p && p.commissionPct != null){
-    line.textContent = " — Commission estimée (" + fmtPct(p.commissionPct) + ") : " + fmtMoney(total * p.commissionPct / 100);
+    var commission = checked.reduce(function(s,c){
+      var v = state.vehicles.find(function(x){ return x.id === c.dataset.vehId; });
+      var com = v ? commissionFor(v) : null;
+      return s + (com || 0);
+    }, 0);
+    var arvalCount = checked.filter(function(c){
+      var v = state.vehicles.find(function(x){ return x.id === c.dataset.vehId; });
+      return v && v.societeLeasing === "Arval";
+    }).length;
+    line.textContent = " — Commission estimée (" + fmtPct(p.commissionPct) + ") : " + fmtMoney(commission) +
+      (arvalCount ? " (" + arvalCount + " véhicule(s) Arval exclu(s), pas de commission remise par ce loueur)" : "");
   } else {
     line.textContent = "";
   }
@@ -1164,13 +1176,20 @@ async function printInvoice(){
     toast("Ce numéro de facture existe déjà sur un autre véhicule. Choisissez-en un autre.", "err");
     return;
   }
-  var total = 0;
+  var total = 0, commissionSum = 0, arvalExclus = 0;
   var lines = rows.map(function(tr){
     var cells = tr.querySelectorAll("td");
-    total += parseFloat(tr.querySelector(".inv-chk").dataset.amount||0);
+    var chk = tr.querySelector(".inv-chk");
+    total += parseFloat(chk.dataset.amount||0);
+    var v = state.vehicles.find(function(x){ return x.id === chk.dataset.vehId; });
+    if (v){
+      var com = commissionFor(v);
+      if (com != null) commissionSum += com;
+      else if (v.societeLeasing === "Arval") arvalExclus++;
+    }
     return "<tr><td>"+escapeHtml(cells[1].textContent)+"</td><td>"+escapeHtml(cells[2].textContent)+"</td><td>"+escapeHtml(cells[3].textContent)+"</td><td style='text-align:right'>"+escapeHtml(cells[4].textContent)+"</td></tr>";
   }).join("");
-  var commission = p && p.commissionPct != null ? total * p.commissionPct / 100 : null;
+  var commission = p && p.commissionPct != null ? commissionSum : null;
 
   // Coordonnees bancaires : recuperees a la volee depuis le Worker (secrets
   // chiffres, jamais stockees dans le JSON GitHub ni dans le state du
@@ -1203,7 +1222,8 @@ async function printInvoice(){
     "<p>Date d'émission : "+dateEm+" — Date d'échéance : "+dateEch+"</p>" +
     "<table><thead><tr><th>Client</th><th>Modèle / Version</th><th>Immatriculation</th><th>Montant HT</th></tr></thead><tbody>"+lines+"</tbody></table>" +
     "<p style='text-align:right;margin-top:14px'><strong>Total HT sélectionné : "+fmtMoney(total)+"</strong>" +
-    (commission!=null ? "<br>Commission ("+fmtPct(p.commissionPct)+") : "+fmtMoney(commission) : "") + "</p>" +
+    (commission!=null ? "<br>Commission ("+fmtPct(p.commissionPct)+") : "+fmtMoney(commission) : "") +
+    (arvalExclus ? "<br><span style='color:#b00'>⚠ "+arvalExclus+" véhicule(s) Arval exclu(s) du calcul — pas de commission remise par ce loueur</span>" : "") + "</p>" +
     bankBlock;
   document.body.classList.add("print-invoice-mode");
   window.print();
