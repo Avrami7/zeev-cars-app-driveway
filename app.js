@@ -10,7 +10,7 @@ const CONFIG = {
 };
 
 const STATUT_LABELS = { COMMANDE:"Commandé — en attente de livraison", LIVRE:"Livré", NON_LIVRE:"Non livré" };
-const state = { user:null, scope:null, partners:[], vehicles:[], meta:{}, dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[], columnFilters:{ statut:null, loueur:null, concession:null } };
+const state = { user:null, scope:null, partners:[], vehicles:[], meta:{}, dirty:false, activeTab:null, theme:"light", deletedVehicleIds:[], columnFilters:{ statut:null, loueur:null, concession:null, client:null, conducteur:null, modele:null, immatriculation:null, montant:null, commission:null } };
 
 var $ = function(s){ return document.querySelector(s); };
 var $all = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
@@ -560,6 +560,12 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
   var colFiltered = list.filter(function(v){
     if (state.columnFilters.statut && state.columnFilters.statut.has(v.statutLivraison)) return false;
     if (state.columnFilters.loueur && state.columnFilters.loueur.has(v.societeLeasing||"")) return false;
+    if (state.columnFilters.client && state.columnFilters.client.has(v.client||"")) return false;
+    if (state.columnFilters.conducteur && state.columnFilters.conducteur.has(v.conducteur||"")) return false;
+    if (state.columnFilters.modele && state.columnFilters.modele.has(v.modele||"")) return false;
+    if (state.columnFilters.immatriculation && state.columnFilters.immatriculation.has(v.immatriculation||"")) return false;
+    if (state.columnFilters.montant && state.columnFilters.montant.has(v.montantHT!=null?fmtMoney(v.montantHT):"—")) return false;
+    if (state.columnFilters.commission && state.columnFilters.commission.has(commissionFor(v)!=null?fmtMoney(commissionFor(v)):(v.societeLeasing==="Arval"?"Pas de commission Arval":"—"))) return false;
     if (showConcession && state.columnFilters.concession && state.columnFilters.concession.has(v.partnerId)) return false;
     return true;
   });
@@ -574,9 +580,9 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
   });
   var head = "<thead><tr><th class=\"chk\"><input type=\"checkbox\" class=\"row-select-all\" title=\"Tout sélectionner\"></th><th class=\"num-col\">N°</th>" +
     (showConcession ? "<th>Concession "+colFilterBtn("concession")+"</th>" : "") +
-    "<th>Client</th><th>Loueur "+colFilterBtn("loueur")+"</th><th>Conducteur</th><th>Modèle / Version</th><th>Immatriculation</th><th>Statut livraison "+colFilterBtn("statut")+"</th>" +
-    (full ? "<th>Montant HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
-    (full ? "<th>Commission HT</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
+    "<th>Client "+colFilterBtn("client")+"</th><th>Loueur "+colFilterBtn("loueur")+"</th><th>Conducteur "+colFilterBtn("conducteur")+"</th><th>Modèle / Version "+colFilterBtn("modele")+"</th><th>Immatriculation "+colFilterBtn("immatriculation")+"</th><th>Statut livraison "+colFilterBtn("statut")+"</th>" +
+    (full ? "<th>Montant HT "+colFilterBtn("montant")+"</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Montant HT</th>") +
+    (full ? "<th>Commission HT "+colFilterBtn("commission")+"</th>" : "<th title=\"Visible uniquement pour les comptes Facturation complète\">🔒 Commission HT</th>") +
     "<th></th></tr></thead>";
   var body = "";
   if (!filtered.length){
@@ -675,6 +681,12 @@ function renderVehicleTable(sel, list, query, showConcession, onStatusClick, ref
       if (col === "statut") entries = list.map(function(v){ return { value: v.statutLivraison, label: STATUT_LABELS[v.statutLivraison] || v.statutLivraison }; });
       else if (col === "loueur") entries = list.map(function(v){ return { value: v.societeLeasing||"", label: v.societeLeasing||"(vide)" }; });
       else if (col === "concession") entries = list.map(function(v){ var p=partnerById(v.partnerId); return { value: v.partnerId, label: p?p.distributeur:"—" }; });
+      else if (col === "client") entries = list.map(function(v){ return { value: v.client||"", label: v.client||"(vide)" }; });
+      else if (col === "conducteur") entries = list.map(function(v){ return { value: v.conducteur||"", label: v.conducteur||"(vide)" }; });
+      else if (col === "modele") entries = list.map(function(v){ return { value: v.modele||"", label: v.modele||"(vide)" }; });
+      else if (col === "immatriculation") entries = list.map(function(v){ return { value: v.immatriculation||"", label: v.immatriculation||"(sans immat.)" }; });
+      else if (col === "montant") entries = list.map(function(v){ var l = v.montantHT!=null?fmtMoney(v.montantHT):"—"; return { value: l, label: l }; });
+      else if (col === "commission") entries = list.map(function(v){ var l = commissionFor(v)!=null?fmtMoney(commissionFor(v)):(v.societeLeasing==="Arval"?"Pas de commission Arval":"—"); return { value: l, label: l }; });
       openColumnFilterPopover(btn, col, entries, applyFn);
     });
   });
